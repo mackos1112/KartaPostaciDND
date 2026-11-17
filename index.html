@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f0c1b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Kroniki D&D 5e — Kreator, Rozwój Postaci & Księga Zaklęć (Wikidot)</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <!-- Top Header -->
+    <header class="top-bar">
+      <div class="brand" onclick="App.switchTab('characters')">
+        <div class="brand-emblem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+            <line x1="12" y1="2" x2="12" y2="22"/>
+            <line x1="2" y1="8.5" x2="22" y2="8.5"/>
+            <line x1="2" y1="15.5" x2="22" y2="15.5"/>
+            <line x1="12" y1="2" x2="2" y2="15.5"/>
+            <line x1="12" y1="2" x2="22" y2="15.5"/>
+            <line x1="12" y1="22" x2="2" y2="8.5"/>
+            <line x1="12" y1="22" x2="22" y2="8.5"/>
+          </svg>
+        </div>
+        <div class="brand-titles">
+          <span class="brand-main" id="brand-main-title">KRONIKI D&amp;D 5E</span>
+          <span class="brand-sub" id="header-subtitle">Kompendium &amp; Karta Postaci (Wikidot 5e)</span>
+        </div>
+      </div>
+
+      <!-- Active Character Quick Indicator -->
+      <div id="active-char-pill" class="active-char-pill hidden" onclick="App.switchTab('sheet')">
+        <span class="char-pill-avatar" id="pill-avatar">⚔️</span>
+        <div class="char-pill-info">
+          <span class="char-pill-name" id="pill-name">Brak postaci</span>
+          <span class="char-pill-meta" id="pill-meta">Poz. 1</span>
+        </div>
+        <div class="char-pill-hp" id="pill-hp">10/10 PW</div>
+      </div>
+
+      <!-- Right Controls: Language Toggle, Dice Tray Toggle, Export/Import -->
+      <div class="top-actions">
+        <div class="lang-switch" title="Przełącz język opisów i interfejsu (Polski / Oryginał Wikidot EN / Dwujęzyczny)">
+          <button class="lang-btn active" data-lang="pl_en" onclick="App.setLangMode('pl_en')">PL+EN</button>
+          <button class="lang-btn" data-lang="pl" onclick="App.setLangMode('pl')">PL</button>
+          <button class="lang-btn" data-lang="en" onclick="App.setLangMode('en')">EN (Wikidot)</button>
+        </div>
+
+        <div class="lang-switch" title="Przełącz jednostki odległości: Stopy (ft / mile) lub System Metryczny (metry / km: 5 ft = 1,5 m)">
+          <button class="lang-btn unit-btn active" data-unit="imperial" onclick="App.setUnitSystem('imperial')">ft</button>
+          <button class="lang-btn unit-btn" data-unit="metric" onclick="App.setUnitSystem('metric')">m (1,5m)</button>
+        </div>
+
+        <button class="icon-btn" id="theme-toggle-btn" onclick="App.toggleTheme()" title="Przełącz motyw: Tryb Jasny (Pergamin) / Tryb Ciemny (Mrok)">
+          ☀️ Jasny
+        </button>
+
+        <button class="icon-btn dice-trigger-btn" onclick="App.toggleDiceDrawer()" title="Rzucacz kości (k4-k20)">
+          <span class="d20-badge" id="top-dice-btn-label">🎲 k20</span>
+        </button>
+
+        <button class="icon-btn" onclick="window.DND_TEST_SUITE && window.DND_TEST_SUITE.openTestReportModal()" title="Uruchom automatyczne testy diagnostyczne aplikacji">
+          🧪
+        </button>
+
+        <button class="icon-btn" onclick="App.openSyncModal()" title="Synchronizacja Wikidot / Eksport JSON / Druk">
+          ⚙️
+        </button>
+      </div>
+    </header>
+
+    <!-- Desktop & Mobile Navigation -->
+    <nav class="main-nav" id="main-nav">
+      <button class="nav-item active" data-tab="characters" onclick="App.switchTab('characters')">
+        <span class="nav-icon">🛡️</span>
+        <span class="nav-label" id="nav-lbl-characters">Bohaterowie</span>
+      </button>
+      <button class="nav-item" data-tab="builder" onclick="App.switchTab('builder')">
+        <span class="nav-icon">✨</span>
+        <span class="nav-label" id="nav-lbl-builder">Kreator &amp; Rozwój</span>
+      </button>
+      <button class="nav-item" data-tab="sheet" onclick="App.switchTab('sheet')">
+        <span class="nav-icon">📜</span>
+        <span class="nav-label" id="nav-lbl-sheet">Karta Postaci</span>
+      </button>
+      <button class="nav-item" data-tab="spells" onclick="App.switchTab('spells')">
+        <span class="nav-icon">🔮</span>
+        <span class="nav-label" id="nav-lbl-spells">Księga Zaklęć</span>
+      </button>
+      <button class="nav-item" data-tab="compendium" onclick="App.switchTab('compendium')">
+        <span class="nav-icon">📚</span>
+        <span class="nav-label" id="nav-lbl-compendium">Wikidot 5e</span>
+      </button>
+    </nav>
+
+    <!-- Main Content Viewport -->
+    <main class="main-content" id="main-view">
+      <!-- Dynamic views rendered by JS -->
+    </main>
+
+    <!-- Floating Quick Dice Drawer -->
+    <aside id="dice-drawer" class="dice-drawer hidden">
+      <div class="dice-drawer-header">
+        <h3 id="dice-drawer-title">🎲 Komnata Kości</h3>
+        <div class="dice-mode-group">
+          <button class="chip-btn active" id="roll-mode-norm" onclick="App.setRollMode('normal')">Normalny</button>
+          <button class="chip-btn adv" id="roll-mode-adv" onclick="App.setRollMode('adv')">Ułatwienie (Adv)</button>
+          <button class="chip-btn dis" id="roll-mode-dis" onclick="App.setRollMode('dis')">Utrudnienie (Dis)</button>
+        </div>
+        <button class="close-btn" onclick="App.toggleDiceDrawer()">✕</button>
+      </div>
+      <div class="dice-grid">
+        <button class="die-btn" onclick="App.rollDie(4)"><span class="die-lbl" data-sides="4">k4</span></button>
+        <button class="die-btn" onclick="App.rollDie(6)"><span class="die-lbl" data-sides="6">k6</span></button>
+        <button class="die-btn" onclick="App.rollDie(8)"><span class="die-lbl" data-sides="8">k8</span></button>
+        <button class="die-btn" onclick="App.rollDie(10)"><span class="die-lbl" data-sides="10">k10</span></button>
+        <button class="die-btn" onclick="App.rollDie(12)"><span class="die-lbl" data-sides="12">k12</span></button>
+        <button class="die-btn d20" onclick="App.rollDie(20)"><span class="die-lbl" data-sides="20">k20</span></button>
+        <button class="die-btn" onclick="App.rollDie(100)"><span class="die-lbl" data-sides="100">k100</span></button>
+      </div>
+      <div class="custom-roll-bar" style="margin-bottom:6px;">
+        <span id="dice-mod-label" style="font-size:0.76rem;color:var(--text-muted);display:flex;align-items:center;">Modyfikator do przycisków k4–k20:</span>
+        <input type="number" id="quick-die-bonus" value="0" style="width:70px;text-align:center;font-family:var(--font-mono);font-weight:700;">
+        <button class="btn-ghost btn-sm" onclick="document.getElementById('quick-die-bonus').value=0">0</button>
+      </div>
+      <div class="custom-roll-bar">
+        <input type="text" id="custom-dice-formula" placeholder="np. 2d6+3, 1k8+1k6+4, d20+5" value="2d6+3" onkeydown="if(event.key==='Enter') App.rollCustomFormula()">
+        <button class="btn-primary btn-sm" id="dice-roll-btn" onclick="App.rollCustomFormula()">Rzuć</button>
+        <button class="btn-ghost btn-sm" id="dice-clear-btn" onclick="App.clearDiceLog()">Wyczyść</button>
+      </div>
+      <div id="dice-log" class="dice-log"></div>
+    </aside>
+
+    <!-- Universal Detail / Level Up / Sync Modal -->
+    <div id="modal-backdrop" class="modal-backdrop hidden" onclick="App.closeModal(event)">
+      <div class="modal-card" id="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3 id="modal-title">Szczegóły</h3>
+          <button class="close-btn" onclick="App.closeModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modal-body"></div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <!-- Data & Logic Scripts -->
+  <script src="js/data-portraits.js"></script>
+  <script src="js/data-classes.js"></script>
+  <script src="js/data-subclasses-details.js"></script>
+  <script src="js/data-races-bg-feats.js"></script>
+  <script src="js/data-races-extra.js"></script>
+  <script src="js/data-feats-extra.js"></script>
+  <script src="js/data-magic-items.js"></script>
+  <script src="js/data-spells.js"></script>
+  <script src="js/data-spells-extra.js"></script>
+  <script src="js/data-spells-complete-1.js"></script>
+  <script src="js/data-spells-complete-2.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/test-suite.js"></script>
+</body>
+</html>
