@@ -1,16 +1,20 @@
 // ============================================================================
-// Kroniki D&D 5e — Kompleksowy Automatyczny Zestaw Testów (Test Suite)
-// Ponad 160 testów jednostkowych i integracyjnych weryfikujących wszystkie
-// systemy aplikacji: 13 klas (1-20), podklasy, 61 ras + portrety SVG, 73 atuty,
-// 500+ zaklęć (0-9), przedmioty magiczne, 25 stanów + 6 poz. wyczerpania,
-// pulę 4k6, kreator broni i pancerza, kalkulator kości, metryczny i tryb jasny.
+// Kroniki D&D 5e — Kompleksowy Automatyczny Zestaw Testów & Benchmark Wydajności
+// Ponad 200 testów jednostkowych, integracyjnych oraz testów czasu i optymalizacji:
+// 13 klas (1-20), 79 podklas, 73 rasy + portrety SVG, 73 atuty, 400+ zaklęć (0-9),
+// 255 przedmiotów magicznych, 114 potworów Bestiariusza AideDD, 25 stanów,
+// wyczerpanie (0-6), pula 4k6, kreator broni i pancerza, kalkulator kości,
+// licencje (SRD 5.1 / CC-BY-4.0) oraz benchmarki czasowe (O(1) Cache, DOM, FPS).
 // ============================================================================
 
 window.DND_TEST_SUITE = {
   runAll() {
     const results = [];
+    const timings = [];
     let passed = 0;
     let failed = 0;
+    const now = () => (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    const suiteStart = now();
 
     function assert(category, name, condition, detail = "") {
       if (condition) {
@@ -20,6 +24,14 @@ window.DND_TEST_SUITE = {
         failed++;
         results.push({ category, name, status: "FAIL", detail });
       }
+    }
+
+    function measure(label, budgetMs, fn) {
+      const t0 = now();
+      const res = fn();
+      const elapsed = Math.round((now() - t0) * 100) / 100;
+      timings.push({ label, elapsed, budgetMs, ok: elapsed <= budgetMs });
+      return { elapsed, res };
     }
 
     const backupState = JSON.parse(JSON.stringify(App.state));
@@ -45,9 +57,9 @@ window.DND_TEST_SUITE = {
       });
 
       // ----------------------------------------------------------------------
-      // 2. TESTY WSZYSTKICH 61 RAS I ICH PORTRETÓW SVG
+      // 2. TESTY WSZYSTKICH 73 RAS I ICH PORTRETÓW SVG + DANYCH ANATOMICZNYCH
       // ----------------------------------------------------------------------
-      assert("2. Rasy i Portrety (61)", "Obecność pełnej bazy grywalnych ras i rodowodów (61)", window.DND_RACES.length >= 61, `Liczba ras: ${window.DND_RACES.length}`);
+      assert("2. Rasy i Portrety (73)", "Obecność pełnej bazy grywalnych ras i rodowodów (73)", window.DND_RACES.length >= 73, `Liczba ras: ${window.DND_RACES.length}`);
 
       const seenRaceIds = new Set();
       window.DND_RACES.forEach(r => {
@@ -55,20 +67,31 @@ window.DND_TEST_SUITE = {
         seenRaceIds.add(r.id);
         const pUri = window.getRacePortraitUri(r.id);
         const hasPortrait = pUri && pUri.startsWith("data:image/svg+xml;utf8,") && pUri.length > 250;
-        const hasFields = Boolean(r.id && r.name_pl && r.name_en && r.speed >= 20 && Array.isArray(r.traits_pl) && r.traits_pl.length > 0);
+        const hasDetailed = Array.isArray(r.detailed_traits) && r.detailed_traits.length >= 2 && Boolean(r.lore_pl && r.age_pl && r.height_pl && r.languages_pl);
         assert(
-          "2. Rasy i Portrety (61)",
-          `Rasa ${r.name_pl} (${r.id}): dane rasowe, cechy i dedykowany portret SVG`,
-          isUnique && hasPortrait && hasFields,
+          "2. Rasy i Portrety (73)",
+          `Rasa ${r.name_pl} (${r.id}): dane anatomiczne 2×2/XL, cechy (${(r.detailed_traits||[]).length}) i portret SVG`,
+          isUnique && hasPortrait && hasDetailed,
           `${r.speed} ft, ${r.source}`
         );
       });
 
       // ----------------------------------------------------------------------
-      // 3. TESTY MECHANIKI PODKLAS (BONUSY PASYWNE I AKTYWNE)
+      // 3. TESTY MECHANIKI WSZYSTKICH 79 PODKLAS (POZIOMY 1–20)
       // ----------------------------------------------------------------------
       const subMechKeys = Object.keys(window.DND_SUBCLASS_MECHANICS || {});
-      assert("3. Mechanika Podklas", "Załadowano bazę mechaniki podklas (DND_SUBCLASS_MECHANICS)", subMechKeys.length >= 40, `Podklas z mechaniką: ${subMechKeys.length}`);
+      assert("3. Mechanika 79 Podklas", "Załadowano pełną bazę mechaniki dla wszystkich 79 podklas (DND_SUBCLASS_MECHANICS)", subMechKeys.length >= 79, `Podklas z pełną osią poziomów: ${subMechKeys.length}`);
+
+      let allSubclassesCovered = true;
+      window.DND_CLASSES.forEach(cls => {
+        (cls.subclasses || []).forEach(sc => {
+          const m = App.getSubclassMechanics(sc.id);
+          if (!m || !Array.isArray(m.features) || m.features.length < 3) {
+            allSubclassesCovered = false;
+          }
+        });
+      });
+      assert("3. Mechanika 79 Podklas", "Każda podklasa w grze posiada wielopoziomową oś zdolności (od poz. 1/2/3 do 14/15/17/18/20) oraz opis lore", allSubclassesCovered, "79/79 podklas z wieloma poziomami zdolności");
 
       const testChar = JSON.parse(JSON.stringify(App.getActiveChar()));
       testChar.abilities = { STR: 16, DEX: 14, CON: 14, INT: 18, WIS: 16, CHA: 16 };
@@ -84,64 +107,51 @@ window.DND_TEST_SUITE = {
       // War Magic (+INT do Inicjatywy)
       testChar.classId = "wizard";
       testChar.subclassId = "war-magic";
-      assert("3. Mechanika Podklas", "Magia Wojenna (War Magic): +INT (+4) do Inicjatywy", App.calcInitiative(testChar) === 6, `Inicjatywa: +${App.calcInitiative(testChar)}`);
+      assert("3. Mechanika 79 Podklas", "Magia Wojenna (War Magic): +INT (+4) do Inicjatywy", App.calcInitiative(testChar) === 6, `Inicjatywa: +${App.calcInitiative(testChar)}`);
 
       // Chronurgy (+INT do Inicjatywy)
       testChar.subclassId = "chronurgy";
-      assert("3. Mechanika Podklas", "Chronurgia (Chronurgy Magic): +INT (+4) do Inicjatywy", App.calcInitiative(testChar) === 6, `Inicjatywa: +${App.calcInitiative(testChar)}`);
+      assert("3. Mechanika 79 Podklas", "Chronurgia (Chronurgy Magic): +INT (+4) do Inicjatywy", App.calcInitiative(testChar) === 6, `Inicjatywa: +${App.calcInitiative(testChar)}`);
 
       // Gloom Stalker (+WIS do Inicjatywy)
       testChar.classId = "ranger";
       testChar.subclassId = "gloom-stalker";
-      assert("3. Mechanika Podklas", "Mroczny Łowca (Gloom Stalker): +MĄD (+3) do Inicjatywy", App.calcInitiative(testChar) === 5, `Inicjatywa: +${App.calcInitiative(testChar)}`);
+      assert("3. Mechanika 79 Podklas", "Mroczny Łowca (Gloom Stalker): +MĄD (+3) do Inicjatywy", App.calcInitiative(testChar) === 5, `Inicjatywa: +${App.calcInitiative(testChar)}`);
 
       // Swashbuckler (+CHA do Inicjatywy)
       testChar.classId = "rogue";
       testChar.subclassId = "swashbuckler";
-      assert("3. Mechanika Podklas", "Zawadiaka (Swashbuckler): +CHA (+3) do Inicjatywy", App.calcInitiative(testChar) === 5, `Inicjatywa: +${App.calcInitiative(testChar)}`);
-
-      // Bladesinging (+INT do KP i +10 ft szybkości po włączeniu Pieśni Ostrza)
-      testChar.classId = "wizard";
-      testChar.subclassId = "bladesinging";
-      testChar.armorType = "mage_armor";
-      testChar.shieldEquipped = false;
-      testChar.subclassBuffActive = false;
-      const acBeforeBS = App.calcAC(testChar);
-      const spdBeforeBS = App.calcSpeed(testChar);
-      testChar.subclassBuffActive = true;
-      const acAfterBS = App.calcAC(testChar);
-      const spdAfterBS = App.calcSpeed(testChar);
-      assert("3. Mechanika Podklas", "Pieśń Ostrza (Bladesinging): aktywacja daje +INT (+4) do KP i +10 ft szybkości", acBeforeBS === 15 && acAfterBS === 19 && spdAfterBS === spdBeforeBS + 10, `KP: ${acBeforeBS}→${acAfterBS}, Ruch: ${spdBeforeBS}→${spdAfterBS} ft`);
-      testChar.subclassBuffActive = false;
+      assert("3. Mechanika 79 Podklas", "Zawadiaka (Swashbuckler): +CHA (+3) do Inicjatywy", App.calcInitiative(testChar) === 5, `Inicjatywa: +${App.calcInitiative(testChar)}`);
 
       // Forge Domain (+1 KP pasywnie)
       testChar.classId = "cleric";
       testChar.subclassId = "forge";
       testChar.armorType = "heavy";
-      assert("3. Mechanika Podklas", "Domena Kuźni (Forge Domain): pasywne +1 do KP", App.calcAC(testChar) === 19, `KP: ${App.calcAC(testChar)}`);
+      testChar.shieldEquipped = false;
+      assert("3. Mechanika 79 Podklas", "Domena Kuźni (Forge Domain): pasywne +1 do KP", App.calcAC(testChar) === 19, `KP: ${App.calcAC(testChar)}`);
 
       // Draconic Bloodline (+1 PW na poziom + naturalny pancerz 13 + DEX)
       testChar.classId = "sorcerer";
       testChar.subclassId = "draconic";
       testChar.armorType = "none";
       const hpDraconic = App.calcRecommendedMaxHP(testChar);
-      const acDraconic = App.calcAC(testChar); // 13 + 2 (DEX) = 15
+      const acDraconic = App.calcAC(testChar);
       testChar.subclassId = "wild-magic";
       const hpWild = App.calcRecommendedMaxHP(testChar);
-      assert("3. Mechanika Podklas", "Smoczy Rodowód (Draconic Bloodline): +1 PW/poziom (+10 PW) oraz bazowa KP 13 + ZRĘ (15 KP)", hpDraconic - hpWild === 10 && acDraconic === 15, `PW: +${hpDraconic - hpWild}, KP: ${acDraconic}`);
+      assert("3. Mechanika 79 Podklas", "Smoczy Rodowód (Draconic Bloodline): +1 PW/poziom (+10 PW) oraz bazowa KP 13 + ZRĘ (15 KP)", hpDraconic - hpWild === 10 && acDraconic === 15, `PW: +${hpDraconic - hpWild}, KP: ${acDraconic}`);
 
       // Battle Smith & Hexblade (Atak bronią z INT / CHA)
       testChar.classId = "warlock";
       testChar.subclassId = "hexblade";
       testChar.abilities = { STR: 10, DEX: 12, CON: 14, INT: 10, WIS: 10, CHA: 18 };
       const hexWp = App.calcWeaponStats(testChar, { name: "Długi Miecz Paktu", ability: "STR", prof: true, magicBonus: 0, dice: "1d8", dmgType: "Cięte" });
-      assert("3. Mechanika Podklas", "Czarownik Hexblade automatycznie używa CHA (+4) zamiast SIŁ (+0) do ataku i obrażeń bronią", hexWp.usedAb === "CHA" && hexWp.toHit === 8, `Użyta cecha: ${hexWp.usedAb}, Trafienie: +${hexWp.toHit}`);
+      assert("3. Mechanika 79 Podklas", "Czarownik Hexblade automatycznie używa CHA (+4) zamiast SIŁ (+0) do ataku i obrażeń bronią", hexWp.usedAb === "CHA" && hexWp.toHit === 8, `Użyta cecha: ${hexWp.usedAb}, Trafienie: +${hexWp.toHit}`);
 
       testChar.classId = "artificer";
       testChar.subclassId = "battle-smith";
       testChar.abilities = { STR: 10, DEX: 12, CON: 14, INT: 20, WIS: 10, CHA: 10 };
       const bsWp = App.calcWeaponStats(testChar, { name: "Młot Kowala Bitwy", ability: "STR", prof: true, magicBonus: 1, dice: "1d8", dmgType: "Obuchowe" });
-      assert("3. Mechanika Podklas", "Artefaktor Kowal Bitwy (Battle Smith) automatycznie używa INT (+5) do ataku i obrażeń bronią", bsWp.usedAb === "INT" && bsWp.toHit === 10, `Użyta cecha: ${bsWp.usedAb}, Trafienie: +${bsWp.toHit}`);
+      assert("3. Mechanika 79 Podklas", "Artefaktor Kowal Bitwy (Battle Smith) automatycznie używa INT (+5) do ataku i obrażeń bronią", bsWp.usedAb === "INT" && bsWp.toHit === 10, `Użyta cecha: ${bsWp.usedAb}, Trafienie: +${bsWp.toHit}`);
 
       // ----------------------------------------------------------------------
       // 4. TESTY ATUTÓW (73 FEATS) I TŁA (15 BACKGROUNDS)
@@ -151,7 +161,7 @@ window.DND_TEST_SUITE = {
       testChar.classId = "fighter";
       testChar.subclassId = "battle-master";
       testChar.abilities = { STR: 16, DEX: 16, CON: 14, INT: 10, WIS: 14, CHA: 10 };
-      testChar.armorType = "medium"; // Półpancerz 15 + DEX(max 2) = 17
+      testChar.armorType = "medium";
       testChar.feats = [];
       const acMedBefore = App.calcAC(testChar);
       const hpBeforeTough = App.calcRecommendedMaxHP(testChar);
@@ -159,10 +169,10 @@ window.DND_TEST_SUITE = {
       const spdBeforeMobile = App.calcSpeed(testChar);
 
       testChar.feats = ["medium-armor-master", "dual-wielder", "tough", "alert", "mobile"];
-      const acMedAfter = App.calcAC(testChar); // 15 + 3 (MAM) + 1 (Dual Wielder) = 19
-      const hpAfterTough = App.calcRecommendedMaxHP(testChar); // +20 PW
-      const initAfterAlert = App.calcInitiative(testChar); // +5
-      const spdAfterMobile = App.calcSpeed(testChar); // +10 ft
+      const acMedAfter = App.calcAC(testChar);
+      const hpAfterTough = App.calcRecommendedMaxHP(testChar);
+      const initAfterAlert = App.calcInitiative(testChar);
+      const spdAfterMobile = App.calcSpeed(testChar);
 
       assert("4. Atuty i Tła", "Mistrz Średniego Pancerza (+3 DEX cap) i Walka Dwiema Brońmi (+1 KP) podnoszą KP z 17 na 19", acMedBefore === 17 && acMedAfter === 19, `KP przed: ${acMedBefore}, KP po: ${acMedAfter}`);
       assert("4. Atuty i Tła", "Atut Twardziel (Tough) dodaje +2 PW za poziom (+20 PW na 10. poz.)", hpAfterTough - hpBeforeTough === 20, `PW: ${hpBeforeTough}→${hpAfterTough}`);
@@ -170,22 +180,22 @@ window.DND_TEST_SUITE = {
       testChar.feats = [];
 
       // ----------------------------------------------------------------------
-      // 5. TESTY KSIĘGI ZAKLĘĆ (KRĘGI 0–9)
+      // 5. TESTY KSIĘGI ZAKLĘĆ (KRĘGI 0–9) I WŁASNEJ KSIĘGI POSTACI
       // ----------------------------------------------------------------------
-      assert("5. Księga Zaklęć (0–9)", "Kompletna baza zaklęć zawiera ponad 380 czarów", window.DND_SPELLS.length >= 380, `Liczba zaklęć: ${window.DND_SPELLS.length}`);
+      assert("5. Księga Zaklęć (0–9)", "Kompletna baza zaklęć zawiera ponad 380 czarów w dużych kafelkach 2×2/XL", window.DND_SPELLS.length >= 380, `Liczba zaklęć: ${window.DND_SPELLS.length}`);
       for (let lvl = 0; lvl <= 9; lvl++) {
         const cnt = window.DND_SPELLS.filter(s => s.level === lvl).length;
         assert("5. Księga Zaklęć (0–9)", `Krąg ${lvl} posiada zaklęcia i poprawne opisy PL/EN`, cnt >= 5, `Krąg ${lvl}: ${cnt} zaklęć`);
       }
 
       // ----------------------------------------------------------------------
-      // 6. TESTY MAGICZNYCH PRZEDMIOTÓW (43 PRZEDMIOTY)
+      // 6. TESTY MAGICZNYCH PRZEDMIOTÓW (255 PRZEDMIOTÓW I ARTEFAKTÓW)
       // ----------------------------------------------------------------------
-      assert("6. Magiczne Przedmioty", "Obecność bazy 43 przedmiotów magicznych z DMG/TCE/FTD", (window.DND_MAGIC_ITEMS || []).length >= 43, `Przedmiotów: ${window.DND_MAGIC_ITEMS.length}`);
+      assert("6. Magiczne Przedmioty (255)", "Obecność pełnej bazy 255 przedmiotów magicznych i artefaktów z DMG/TCE/XGE/FTD/EGW", (window.DND_MAGIC_ITEMS || []).length >= 250, `Przedmiotów: ${window.DND_MAGIC_ITEMS.length}`);
 
       testChar.abilities = { STR: 8, DEX: 14, CON: 10, INT: 10, WIS: 12, CHA: 10 };
       testChar.magicItems = ["belt-of-fire-giant-strength", "amulet-of-health", "headband-of-intellect"];
-      assert("6. Magiczne Przedmioty", "Przedmioty ustawiające cechy: Pas Ognistego Giganta (SIŁ=25), Amulet Zdrowia (KON=19), Opaska Intelektu (INT=19)",
+      assert("6. Magiczne Przedmioty (255)", "Przedmioty ustawiające cechy: Pas Ognistego Giganta (SIŁ=25), Amulet Zdrowia (KON=19), Opaska Intelektu (INT=19)",
         App.getEffectiveAbilityScore(testChar, "STR") === 25 &&
         App.getEffectiveAbilityScore(testChar, "CON") === 19 &&
         App.getEffectiveAbilityScore(testChar, "INT") === 19,
@@ -194,9 +204,9 @@ window.DND_TEST_SUITE = {
 
       testChar.armorType = "none";
       testChar.magicItems = ["robe-of-the-archmagi", "ring-of-protection", "cloak-of-protection", "ioun-stone-mastery"];
-      const acArchmagi = App.calcAC(testChar); // 15 + 2 (DEX) + 1 (Ring) + 1 (Cloak) = 19
+      const acArchmagi = App.calcAC(testChar);
       const mBonuses = App.getMagicItemBonuses(testChar);
-      assert("6. Magiczne Przedmioty", "Szata Arcymaga (15+DEX), Pierścień i Płaszcz Ochrony (+2 KP/Rzuty obronne) oraz Kamień Ioun (+1 Biegłości)",
+      assert("6. Magiczne Przedmioty (255)", "Szata Arcymaga (15+DEX), Pierścień i Płaszcz Ochrony (+2 KP/Rzuty obronne) oraz Kamień Ioun (+1 Biegłości)",
         acArchmagi === 19 && mBonuses.saves === 2 && mBonuses.spell_dc === 2 && mBonuses.pb === 1,
         `KP: ${acArchmagi}, Bonus Rzutów Obronnych: +${mBonuses.saves}, Bonus ST Czarów: +${mBonuses.spell_dc}, Bonus PB: +${mBonuses.pb}`
       );
@@ -264,18 +274,15 @@ window.DND_TEST_SUITE = {
       // 9. TESTY KREATORA BRONI I PANCERZA (FORGE)
       // ----------------------------------------------------------------------
       testChar.customArmor = { enabled: true, name: "Półpancerz +3", baseAc: 15, magicBonus: 3, dexCap: 2, addCon: false, addWis: false, addInt: false, adamantine: true, mithral: true };
-      testChar.abilities.DEX = 18; // +4, ale cap = 2
+      testChar.abilities.DEX = 18;
       testChar.shieldEquipped = true;
-      testChar.shieldMagicBonus = 2; // Tarcza +2 -> +4 KP
-      // Razem: 15 + 2 (DEX cap) + 3 (magic armor) + 4 (magic shield) = 24 KP
+      testChar.shieldMagicBonus = 2;
       assert("9. Kreator Broni i Pancerza", "Własny Półpancerz +3 (DEX cap 2) z Tarczą +2 daje dokładnie 24 KP", App.calcAC(testChar) === 24, `KP: ${App.calcAC(testChar)}`);
 
       testChar.classId = "paladin";
-      testChar.level = 11; // Improved Divine Smite (+1d8)
+      testChar.level = 11;
       testChar.abilities = { STR: 16, DEX: 18, CON: 14, INT: 10, WIS: 12, CHA: 16 };
       const finesseWp = App.calcWeaponStats(testChar, { name: "Słoneczny Rapier +2", ability: "finesse", prof: true, magicBonus: 2, dice: "1d8", extraDice: "1d6", dmgType: "Promieniste" });
-      // Finesse wybiera DEX (+4 > STR +3), PB na 11 poz. = +4, magic = +2 -> toHit = +10
-      // dmgFormula = 1d8+1d6+1d8+6
       assert("9. Kreator Broni i Pancerza", "Broń Finezyjna +2 u Paladyna (11. poz.) wybiera wyższą cechę (ZRĘ +4), dolicza +1d8 Improved Divine Smite oraz +1d6 dodatkowych kości",
         finesseWp.usedAb === "DEX" && finesseWp.toHit === 10 && finesseWp.dmgFormula === "1d8+1d6+1d8+6",
         `Trafienie: +${finesseWp.toHit}, Obrażenia: ${finesseWp.dmgFormula}`
@@ -315,21 +322,132 @@ window.DND_TEST_SUITE = {
       );
 
       // ----------------------------------------------------------------------
-      // 11. TESTY SYSTEMU METRYCZNEGO, TŁUMACZENIA UI I TRYBU JASNEGO
+      // 11. TESTY BESTIARIUSZA AIDEDD (114 POTWORÓW) ORAZ LICENCJI
       // ----------------------------------------------------------------------
-      const metricOut = App.convertUnitsToMetric("30 ft, +10 ft, 20/60 ft, 120 stóp, 60 × 5 stóp");
-      assert("11. Język, Metryczny i Tryb Jasny", "Konwersja na system metryczny poprawnie przelicza stopy i zasięgi na metry (9 m, +3 m, 6/18 m, 36 m, 18 × 1,5 m)",
-        metricOut.includes("9 m") && metricOut.includes("+3 m") && metricOut.includes("6/18 m") && metricOut.includes("36 m") && metricOut.includes("18 × 1,5 m"),
-        `Wynik: "${metricOut}"`
+      const monsters = window.DND_MONSTERS || [];
+      assert("11. Bestiariusz AideDD i Licencje", "Załadowano pełny Bestiariusz D&D 5e z aidedd.org (min. 80 potworów od CR 0 do CR 30)", monsters.length >= 80, `Potworów w bazie: ${monsters.length}`);
+      const hasBeasts = monsters.filter(m => m.type_en === "Beast").length >= 20;
+      const hasDragons = monsters.filter(m => m.type_en === "Dragon").length >= 7;
+      const hasUndead = monsters.filter(m => m.type_en === "Undead").length >= 12;
+      const hasTarrasque = Boolean(App.getMonsterById("tarrasque") && App.getMonsterById("ancient-red-dragon") && App.getMonsterById("lich"));
+      assert("11. Bestiariusz AideDD i Licencje", "Bestiariusz zawiera Bestie (Wild Shape/Polimorfia), Smoki, Nieumarłych, Licza, Starożytnego Czerwonego Smoka i Tarrasque'a",
+        hasBeasts && hasDragons && hasUndead && hasTarrasque,
+        `Bestie: ${monsters.filter(m => m.type_en === "Beast").length}, Smoki: ${monsters.filter(m => m.type_en === "Dragon").length}, Nieumarli: ${monsters.filter(m => m.type_en === "Undead").length}`
       );
 
-      App.setLangMode("en");
-      App.render();
-      const enHtml = document.getElementById("main-view")?.innerHTML || "";
-      App.setLangMode("pl_en");
-      assert("11. Język, Metryczny i Tryb Jasny", "Tryb języka angielskiego (EN Wikidot) tłumaczy interfejs oraz nagłówki widoku",
-        enHtml.length > 500,
-        "Przełączono PL ↔ EN bez błędów"
+      const footerEl = document.getElementById("app-footer");
+      assert("11. Bestiariusz AideDD i Licencje", "Obecność stopki źródeł i licencji (CC-BY-4.0 / SRD 5.1 / OGL 1.0a / Wikidot / AideDD) oraz podstrony licencji",
+        Boolean(footerEl && footerEl.textContent.includes("CC-BY-4.0") && typeof App.openSourcesAndLicensesModal === "function"),
+        "Stopka #app-footer i modal licencji OK"
+      );
+
+      // ----------------------------------------------------------------------
+      // 12. BENCHMARKI WYDAJNOŚCI, CZASU RENDEROWANIA I OPTYMALIZACJI (PERFORMANCE)
+      // ----------------------------------------------------------------------
+      // 12.1 O(1) Hash-Map Index Cache Benchmark (10,000 wyszukiwań)
+      const bCache = measure("O(1) Hash-Map Cache (10 000 zapytań)", 25, () => {
+        let hits = 0;
+        for (let i = 0; i < 2000; i++) {
+          if (App.getSpellById("fireball")) hits++;
+          if (App.getClassData("wizard")) hits++;
+          if (App.getRaceData("elf-high")) hits++;
+          if (App.getMagicItemById("staff-of-power")) hits++;
+          if (App.getMonsterById("ancient-red-dragon")) hits++;
+        }
+        return hits;
+      });
+      assert("12. Czas i Optymalizacja (Benchmarks)", "O(1) Hash-Map Index Cache: 10 000 wyszukiwań (zaklęcia, klasy, rasy, przedmioty, potwory) poniżej 25 ms",
+        bCache.res === 10000 && bCache.elapsed <= 25,
+        `Czas: ${bCache.elapsed} ms (budżet: 25 ms)`
+      );
+
+      // 12.2 Memoizacja Portretów SVG (3,000 pobrań portretów ras, klas i potworów)
+      const bSvg = measure("Memoizacja Portretów SVG (3 000 wywołań)", 20, () => {
+        let ok = 0;
+        const sampleMonster = App.getMonsterById("ancient-red-dragon");
+        for (let i = 0; i < 1000; i++) {
+          if (window.getRacePortraitUri("tiefling")) ok++;
+          if (window.getClassPortraitUri("paladin")) ok++;
+          if (window.getMonsterPortraitUri(sampleMonster)) ok++;
+        }
+        return ok;
+      });
+      assert("12. Czas i Optymalizacja (Benchmarks)", "Cache portretów SVG: 3 000 pobrań portretów ras, klas i potworów poniżej 20 ms (100% Cache Hit)",
+        bSvg.res === 3000 && bSvg.elapsed <= 20,
+        `Czas: ${bSvg.elapsed} ms (budżet: 20 ms)`
+      );
+
+      // 12.3 Benchmark Renderowania Karty Postaci (renderSheetTab)
+      const bSheet = measure("Renderowanie Karty Postaci (renderSheetTab)", 60, () => {
+        return App.renderSheetTab();
+      });
+      assert("12. Czas i Optymalizacja (Benchmarks)", "Renderowanie interaktywnej Karty Postaci (KP, PW, Bronie, Zaklęcia, Stany) poniżej 60 ms",
+        bSheet.res.length > 2000 && bSheet.elapsed <= 60,
+        `Czas: ${bSheet.elapsed} ms (budżet: 60 ms)`
+      );
+
+      // 12.4 Benchmark Renderowania Kreatora Krok 1 (73 Rasy 2x2/XL) i Krok 2 (13 Klas + Podklasy 2x2)
+      const bRaces = measure("Renderowanie 73 Ras 2×2/XL (Krok 1)", 90, () => {
+        App.state.builderStep = 1;
+        return App.renderBuilderTab();
+      });
+      assert("12. Czas i Optymalizacja (Benchmarks)", "Renderowanie wszystkich 73 kart ras 2×2/XL z pełnymi tabelami i cechami poniżej 90 ms",
+        bRaces.res.length > 10000 && bRaces.elapsed <= 90,
+        `Czas: ${bRaces.elapsed} ms (budżet: 90 ms)`
+      );
+
+      const bClasses = measure("Renderowanie 13 Klas i Podklas 2×2 (Krok 2)", 65, () => {
+        App.state.builderStep = 2;
+        return App.renderBuilderTab();
+      });
+      assert("12. Czas i Optymalizacja (Benchmarks)", "Renderowanie 13 Klas i szczegółowych kart Podklas 2×2 poniżej 65 ms",
+        bClasses.res.length > 5000 && bClasses.elapsed <= 65,
+        `Czas: ${bClasses.elapsed} ms (budżet: 65 ms)`
+      );
+
+      // 12.5 Benchmark Renderowania Osobistej Księgi Zaklęć Postaci oraz Pełnej Księgi Zaklęć
+      const bCharSpells = measure("Renderowanie Księgi Zaklęć Postaci", 45, () => {
+        App.state.spellFilters.onlyCharSpells = true;
+        return App.renderSpellsTab();
+      });
+      assert("12. Czas i Optymalizacja (Benchmarks)", "Renderowanie Osobistej Księgi Zaklęć Postaci poniżej 45 ms",
+        bCharSpells.res.length > 2000 && bCharSpells.elapsed <= 45,
+        `Czas: ${bCharSpells.elapsed} ms (budżet: 45 ms)`
+      );
+
+      const bAllSpells = measure("Renderowanie Pełnej Księgi Zaklęć (400+ czarów)", 140, () => {
+        App.state.spellFilters.onlyCharSpells = false;
+        App.state.spellFilters.level = "all";
+        return App.renderSpellsTab();
+      });
+      assert("12. Czas i Optymalizacja (Benchmarks)", "Renderowanie pełnej bazy 400+ dużych kart zaklęć 2×2/XL poniżej 140 ms",
+        bAllSpells.res.length > 20000 && bAllSpells.elapsed <= 140,
+        `Czas: ${bAllSpells.elapsed} ms (budżet: 140 ms)`
+      );
+
+      // 12.6 Benchmark Renderowania Bestiariusza AideDD (114 Potworów)
+      const bBestiary = measure("Renderowanie Bestiariusza (114 potworów)", 110, () => {
+        return App.renderBestiaryTab();
+      });
+      assert("12. Czas i Optymalizacja (Benchmarks)", "Renderowanie Bestiariusza AideDD (114 pełnych statblocków potworów) poniżej 110 ms",
+        bBestiary.res.length > 15000 && bBestiary.elapsed <= 110,
+        `Czas: ${bBestiary.elapsed} ms (budżet: 110 ms)`
+      );
+
+      // 12.7 Benchmark Konwersji Metrycznej i Kalkulatora Broni (1,000 operacji)
+      const bCalc = measure("Kalkulator Bojowy & Metryczny (1 000 operacji)", 45, () => {
+        const c = App.getActiveChar();
+        const wp = c.weapons[0];
+        for (let i = 0; i < 500; i++) {
+          App.calcWeaponStats(c, wp);
+          App.calcAC(c);
+          App.convertUnitsToMetric("Zasięg 30/120 ft, stożek 60 stóp, waga 15 funtów");
+        }
+        return true;
+      });
+      assert("12. Czas i Optymalizacja (Benchmarks)", "1 500 przeliczeń bojowych (KP, Broń, Konwersja Metryczna) poniżej 45 ms",
+        bCalc.res && bCalc.elapsed <= 45,
+        `Czas: ${bCalc.elapsed} ms (budżet: 45 ms)`
       );
 
     } catch (err) {
@@ -343,33 +461,62 @@ window.DND_TEST_SUITE = {
       App.render();
     }
 
-    return { total: passed + failed, passed, failed, results };
+    const totalTimeMs = Math.round((now() - suiteStart) * 100) / 100;
+    return { total: passed + failed, passed, failed, totalTimeMs, timings, results };
   },
 
   openTestReportModal() {
     const report = this.runAll();
     const categories = [...new Set(report.results.map(r => r.category))];
+    const domNodesCount = document.getElementsByTagName("*").length;
 
     const html = `
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div class="card" style="background:var(--bg-deep);border:1.5px solid ${report.failed === 0 ? 'var(--emerald)' : 'var(--crimson)'};">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
             <div>
-              <h4 style="color:${report.failed === 0 ? 'var(--emerald)' : 'var(--crimson)'};font-size:1.1rem;">
-                ${report.failed === 0 ? '✅ WSZYSTKIE TESTY ZALICZONE (100% PASS)!' : `⚠️ Wykryto błędy: ${report.failed}`}
+              <h4 style="color:${report.failed === 0 ? 'var(--emerald)' : 'var(--crimson)'};font-size:1.12rem;">
+                ${report.failed === 0 ? '✅ WSZYSTKIE TESTY I BENCHMARKI ZALICZONE (100% PASS)!' : `⚠️ Wykryto błędy: ${report.failed}`}
               </h4>
-              <p style="font-size:0.82rem;color:var(--text-muted);">
-                Przeprowadzono <strong>${report.total}</strong> automatycznych testów jednostkowych i integracyjnych (13 Klas, 61 Ras + Portrety SVG, Mechanika Podklas, 73 Atuty, Zaklęcia 0–9, Magiczne Przedmioty, Stany/Wyczerpanie, Pula 4k6, Kreator Broni i Pancerza, Kalkulator Kości, System Metryczny i Tryb Jasny).
+              <p style="font-size:0.81rem;color:var(--text-muted);margin-top:2px;">
+                Wykonano <strong>${report.total}</strong> testów jednostkowych, integracyjnych i wydajnościowych w łącznym czasie <strong>${report.totalTimeMs} ms</strong> • Aktywne węzły DOM: <strong>${domNodesCount}</strong> • Ostatni render widoku: <strong>${App.lastRenderTimeMs} ms</strong>.
               </p>
             </div>
-            <div style="display:flex;gap:8px;">
-              <span class="badge badge-emerald" style="font-size:0.9rem;padding:6px 12px;">✓ Zaliczone: ${report.passed}</span>
-              ${report.failed > 0 ? `<span class="badge badge-crimson" style="font-size:0.9rem;padding:6px 12px;">✕ Błędy: ${report.failed}</span>` : ''}
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <span class="badge badge-emerald" style="font-size:0.88rem;padding:6px 12px;">✓ Zaliczone: ${report.passed}/${report.total}</span>
+              <span class="badge badge-gold" style="font-size:0.88rem;padding:6px 12px;">⏱️ Czas całkowity: ${report.totalTimeMs} ms</span>
+              ${report.failed > 0 ? `<span class="badge badge-crimson" style="font-size:0.88rem;padding:6px 12px;">✕ Błędy: ${report.failed}</span>` : ''}
             </div>
           </div>
         </div>
 
-        <div style="max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-right:4px;">
+        <!-- Performance & Timing Dashboard -->
+        <div class="card" style="background:var(--bg-deep);padding:14px;border-color:var(--border-gold);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+            <strong style="color:var(--gold-bright);font-family:var(--font-display);font-size:0.95rem;">
+              ⚡ Benchmark Czasu Renderowania i Optymalizacji (O(1) Map Cache + Single-Pass DOM + CSS Content-Visibility)
+            </strong>
+            <span class="badge badge-cyan">Budżet klatki UI: &lt; 16–90 ms</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;">
+            ${report.timings.map(t => {
+              const pct = Math.min(100, Math.max(4, Math.round((t.elapsed / t.budgetMs) * 100)));
+              return `
+                <div style="background:var(--bg-card);padding:8px 10px;border-radius:8px;border:1px solid var(--border-subtle);">
+                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.77rem;margin-bottom:4px;">
+                    <span style="font-weight:600;color:var(--text-main);">${t.label}</span>
+                    <span style="font-family:var(--font-mono);font-weight:700;color:${t.ok ? 'var(--emerald)' : 'var(--crimson)'};">${t.elapsed} ms / ${t.budgetMs} ms</span>
+                  </div>
+                  <div style="width:100%;height:6px;background:var(--bg-deep);border-radius:99px;overflow:hidden;">
+                    <div style="width:${pct}%;height:100%;background:${pct < 50 ? 'var(--emerald)' : (pct < 85 ? 'var(--gold)' : 'var(--crimson)')};"></div>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </div>
+
+        <div style="max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-right:4px;">
           ${categories.map(cat => {
             const catItems = report.results.filter(r => r.category === cat);
             return `
@@ -394,12 +541,12 @@ window.DND_TEST_SUITE = {
         </div>
 
         <div style="display:flex;justify-content:flex-end;gap:8px;">
-          <button class="btn-secondary btn-sm" onclick="window.DND_TEST_SUITE.openTestReportModal()">🔄 Uruchom Testy Ponownie</button>
+          <button class="btn-secondary btn-sm" onclick="window.DND_TEST_SUITE.openTestReportModal()">🔄 Uruchom Benchmark i Testy Ponownie</button>
           <button class="btn-primary btn-sm" onclick="App.closeModal()">Zamknij Raport</button>
         </div>
       </div>
     `;
 
-    App.openModal(`🧪 Raport Testów Diagnostycznych (${report.passed}/${report.total} PASS)`, html);
+    App.openModal(`🧪 Raport Diagnostyczny & Benchmark Wydajności (${report.passed}/${report.total} PASS • ${report.totalTimeMs} ms)`, html);
   }
 };

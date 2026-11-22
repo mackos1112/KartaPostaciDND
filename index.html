@@ -1,4 +1,24 @@
 <!DOCTYPE html>
+<!--
+  ============================================================================
+  KRONIKI D&D 5E — Kreator Postaci (1–20), Karta Postaci, Księga Zaklęć & Bestiariusz
+  ============================================================================
+  ŹRÓDŁA REFERENCYJNE (SOURCES):
+  - D&D 5e System Reference Document 5.1 (SRD 5.1) — Wizards of the Coast LLC
+  - D&D 5e Wikidot Compendium — http://dnd5e.wikidot.com/
+  - AideDD D&D 5e Monster Bestiary — https://www.aidedd.org/monster-dnd5/
+  - Podręczniki źródłowe D&D 5e: PHB, DMG, MM, XGE, TCE, FTD, MPMM, VRGR, ERLW, EGW, BGG, BMT
+
+  LICENCJE (LICENSES):
+  - SRD 5.1 Content: Creative Commons Attribution 4.0 International (CC-BY-4.0)
+    ("System Reference Document 5.1" by Wizards of the Coast LLC, available at
+    https://creativecommons.org/licenses/by/4.0/legalcode)
+  - Open Game License v1.0a (OGL 1.0a) — © 2000 Wizards of the Coast, Inc.
+  - Wizards of the Coast Fan Content Policy: Nieoficjalne treści fanowskie
+    dozwolone w ramach Polityki Treści Fanowskich. Niezatwierdzone przez Wizards.
+  - Kod aplikacji i proceduralne grafiki SVG: MIT License (zobacz plik LICENSE.md)
+  ============================================================================
+-->
 <html lang="pl" class="dark">
 <head>
   <meta charset="UTF-8">
@@ -71,6 +91,10 @@
           🧪
         </button>
 
+        <button class="icon-btn" onclick="App.openSourcesAndLicensesModal()" title="Źródła danych, podręczniki i licencje (SRD 5.1 / CC-BY-4.0 / Wikidot / AideDD)">
+          ⚖️
+        </button>
+
         <button class="icon-btn" onclick="App.openSyncModal()" title="Synchronizacja Wikidot / Eksport JSON / Druk">
           ⚙️
         </button>
@@ -95,6 +119,10 @@
         <span class="nav-icon">🔮</span>
         <span class="nav-label" id="nav-lbl-spells">Księga Zaklęć</span>
       </button>
+      <button class="nav-item" data-tab="bestiary" onclick="App.switchTab('bestiary')">
+        <span class="nav-icon">🐉</span>
+        <span class="nav-label" id="nav-lbl-bestiary">Bestiariusz</span>
+      </button>
       <button class="nav-item" data-tab="compendium" onclick="App.switchTab('compendium')">
         <span class="nav-icon">📚</span>
         <span class="nav-label" id="nav-lbl-compendium">Wikidot 5e</span>
@@ -105,6 +133,27 @@
     <main class="main-content" id="main-view">
       <!-- Dynamic views rendered by JS -->
     </main>
+
+    <!-- Sources, References & Licenses Footer -->
+    <footer class="app-footer no-print" id="app-footer">
+      <div class="app-footer-inner">
+        <div class="app-footer-col">
+          <div class="app-footer-title">⚖️ Licencje (CC-BY-4.0 / OGL 1.0a / Fan Content)</div>
+          <p class="app-footer-text">
+            Obejmuje materiały z <strong>System Reference Document 5.1 (SRD 5.1)</strong> autorstwa <strong>Wizards of the Coast LLC</strong>, udostępnione na licencji <a href="https://creativecommons.org/licenses/by/4.0/legalcode" target="_blank" rel="noopener">Creative Commons Attribution 4.0 International (CC-BY-4.0)</a> oraz <strong>Open Game License v1.0a</strong>. Projekt niekomercyjny zgodny z <a href="https://company.wizards.com/pl/legal/fancontentpolicy" target="_blank" rel="noopener">Wizards of the Coast Fan Content Policy</a> (niezatwierdzony przez Wizards). Kod aplikacji i portrety SVG: <strong>MIT License</strong>.
+          </p>
+        </div>
+        <div class="app-footer-col">
+          <div class="app-footer-title">📚 Źródła Danych i Kompendia</div>
+          <div class="app-footer-links">
+            <a href="http://dnd5e.wikidot.com/" target="_blank" rel="noopener" class="footer-link-pill">🌐 dnd5e.wikidot.com ↗</a>
+            <a href="https://www.aidedd.org/monster-dnd5/" target="_blank" rel="noopener" class="footer-link-pill">🐉 aidedd.org/monster-dnd5 ↗</a>
+            <a href="https://dnd.wizards.com/resources/systems-reference-document" target="_blank" rel="noopener" class="footer-link-pill">📜 Oficjalny SRD 5.1 ↗</a>
+            <button class="btn-secondary btn-sm" onclick="App.openSourcesAndLicensesModal()">📖 Pełne Źródła, Skróty Podręczników i Licencje</button>
+          </div>
+        </div>
+      </div>
+    </footer>
 
     <!-- Floating Quick Dice Drawer -->
     <aside id="dice-drawer" class="dice-drawer hidden">
@@ -160,8 +209,12 @@
   <script src="js/data-subclasses-details.js"></script>
   <script src="js/data-races-bg-feats.js"></script>
   <script src="js/data-races-extra.js"></script>
+  <script src="js/data-races-details.js"></script>
   <script src="js/data-feats-extra.js"></script>
   <script src="js/data-magic-items.js"></script>
+  <script src="js/data-magic-items-extra.js"></script>
+  <script src="js/data-monsters.js"></script>
+  <script src="js/data-monsters-extra.js"></script>
   <script src="js/data-spells.js"></script>
   <script src="js/data-spells-extra.js"></script>
   <script src="js/data-spells-complete-1.js"></script>

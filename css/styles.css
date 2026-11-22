@@ -1,3 +1,10 @@
+/* ============================================================================
+ * Kroniki D&D 5e — Arkusz Stylów (Mroczne Kroniki & Królewski Pergamin)
+ * Źródła danych: SRD 5.1 (Wizards of the Coast), dnd5e.wikidot.com, aidedd.org
+ * Licencje: Creative Commons Attribution 4.0 (CC-BY-4.0), OGL 1.0a,
+ * Wizards of the Coast Fan Content Policy. Kod i SVG: MIT License.
+ * ============================================================================ */
+
 :root {
   --bg-deep: #0b0914;
   --bg-panel: #151226;
@@ -565,6 +572,184 @@ html, body {
   gap: 16px;
 }
 
+/* Duże kafelki ras 2x2 oraz jeszcze większe kafelki XL (pełne dane rasowe Wikidot) */
+.grid-races-detailed {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  align-items: start;
+}
+
+.grid-races-detailed.all-xl {
+  grid-template-columns: 1fr;
+}
+
+.race-card-2x2 {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex-shrink: 0;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 340px;
+}
+
+.race-card-2x2 > *,
+.subclass-card-detailed > * {
+  flex-shrink: 0;
+}
+
+.race-card-xl {
+  grid-column: 1 / -1;
+  border-color: var(--border-gold);
+}
+
+.race-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 8px;
+  background: var(--bg-deep);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.race-vital-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 9px;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.race-vital-lbl {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.race-vital-val {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+  line-height: 1.3;
+}
+
+.race-lore-box {
+  background: linear-gradient(135deg, rgba(229, 193, 88, 0.08), rgba(139, 92, 246, 0.07));
+  border-left: 3px solid var(--gold);
+  padding: 11px 14px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  line-height: 1.55;
+}
+
+.race-traits-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.race-card-xl .race-traits-grid {
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}
+
+.race-trait-box {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+@media (max-width: 1120px) {
+  .grid-races-detailed,
+  .grid-spells-detailed {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Duże kafelki zaklęć 2x2 oraz automatycznie powiększane XL dla długich opisów */
+.grid-spells-detailed {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+.grid-spells-detailed.all-xl {
+  grid-template-columns: 1fr;
+}
+
+.spell-card-2x2 {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 280px;
+}
+
+.spell-card-xl {
+  grid-column: 1 / -1;
+  border-color: var(--border-gold);
+}
+
+.spell-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 8px;
+  background: var(--bg-deep);
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.spell-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 8px;
+  background: var(--bg-card);
+  border-radius: 6px;
+}
+
+.spell-meta-lbl {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.spell-meta-val {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+}
+
+.spell-desc-box {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--arcane);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 0.86rem;
+  color: var(--text-main);
+  line-height: 1.62;
+  overflow: visible;
+  max-height: none;
+}
+
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
@@ -573,7 +758,8 @@ html, body {
   box-shadow: var(--shadow-card);
   transition: all 0.2s ease;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  flex-shrink: 0;
 }
 
 .card:hover {
@@ -745,11 +931,20 @@ textarea {
   border: 1px solid var(--border-subtle);
   color: var(--text-main);
   padding: 9px 12px;
+  line-height: 1.45;
+  min-height: 40px;
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
   font-size: 0.9rem;
   outline: none;
   transition: border-color 0.15s;
+}
+
+select option {
+  background: var(--bg-panel);
+  color: var(--text-main);
+  padding: 8px 12px;
+  line-height: 1.5;
 }
 
 input:focus, select:focus, textarea:focus {
@@ -1344,6 +1539,69 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--crimson);
 }
 
+/* Subclass Detailed Cards (2x2) */
+.grid-subclasses-detailed {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.subclass-card-detailed {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 320px;
+}
+
+.subclass-card-detailed:hover {
+  border-color: var(--border-gold);
+}
+
+.subclass-card-detailed.selected {
+  border: 2px solid var(--gold);
+  box-shadow: var(--shadow-gold);
+}
+
+.subclass-feature-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subclass-feature-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.subclass-feature-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--arcane);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .grid-subclasses-detailed {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Responsive Mobile Bottom Bar */
 @media (max-width: 768px) {
   .top-bar {
@@ -1383,6 +1641,138 @@ input:focus, select:focus, textarea:focus {
   .dice-drawer {
     bottom: 72px;
     right: 12px;
+  }
+}
+
+/* Ustandaryzowane akordeony dla nadmiarowych danych na kartach 2x2 oraz pasek paginacji */
+.std-accordion {
+  background: var(--bg-deep);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.std-accordion summary {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(229, 193, 88, 0.12), rgba(139, 92, 246, 0.08));
+  list-style: none;
+}
+
+.std-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.std-accordion summary::after {
+  content: "▼ Rozwiń";
+  font-size: 0.72rem;
+  color: var(--arcane-bright);
+  font-weight: 600;
+}
+
+.std-accordion[open] summary::after {
+  content: "▲ Zwiń";
+}
+
+.std-accordion-body {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.std-pagination-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 12px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-md);
+}
+
+/* Footer: Sources & Licenses */
+.app-footer {
+  border-top: 1px solid var(--border-gold);
+  background: var(--bg-panel);
+  padding: 20px 24px 26px;
+  margin-top: auto;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.app-footer-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 22px;
+  align-items: center;
+}
+
+.app-footer-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--gold);
+  font-size: 0.88rem;
+  margin-bottom: 6px;
+}
+
+.app-footer-text {
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.app-footer-text a {
+  color: var(--gold-bright);
+  text-decoration: underline;
+}
+
+.app-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.footer-link-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 99px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border-subtle);
+  color: var(--gold-bright);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.76rem;
+  transition: all 0.15s;
+}
+
+.footer-link-pill:hover {
+  border-color: var(--gold);
+  background: var(--bg-card);
+}
+
+@media (max-width: 900px) {
+  .app-footer-inner {
+    grid-template-columns: 1fr;
+  }
+  .app-footer {
+    padding-bottom: 85px;
   }
 }
 

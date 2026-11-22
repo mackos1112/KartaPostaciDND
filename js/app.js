@@ -1,6 +1,19 @@
 // ============================================================================
 // Kroniki D&D 5e — Główny Silnik Aplikacji (Kreator, Rozwój 1–20, Karta Postaci,
-// Księga Zaklęć z podziałem na Kręgi i Klasy, Kompendium Wikidot, Kości)
+// Księga Zaklęć z podziałem na Kręgi i Klasy, Bestiariusz AideDD, Kompendium Wikidot)
+// ----------------------------------------------------------------------------
+// ŹRÓDŁA DANYCH (SOURCES):
+// - System Reference Document 5.1 (SRD 5.1) — Wizards of the Coast LLC
+// - D&D 5e Wikidot Compendium — http://dnd5e.wikidot.com/
+// - AideDD D&D 5e Monster Database — https://www.aidedd.org/monster-dnd5/
+// - Podręczniki D&D 5e: PHB, DMG, MM, XGE, TCE, FTD, MPMM, VRGR, ERLW, EGW, BGG, BMT
+//
+// LICENCJE (LICENSES):
+// - SRD 5.1: Creative Commons Attribution 4.0 International (CC-BY-4.0)
+//   https://creativecommons.org/licenses/by/4.0/legalcode
+// - Open Game License v1.0a (OGL 1.0a) — © 2000 Wizards of the Coast, Inc.
+// - Wizards of the Coast Fan Content Policy (niekomercyjne narzędzie fanowskie)
+// - Kod źródłowy aplikacji oraz proceduralne grafiki SVG: MIT License
 // ============================================================================
 
 const App = {
@@ -32,11 +45,19 @@ const App = {
     itemFilterRarity: "all",
     rolledPool: [],
     selectedPoolIdx: null,
-    selectedClassView: "wizard"
+    selectedClassView: "wizard",
+    pageLimits: {
+      races: 24,
+      feats: 24,
+      items: 24,
+      spells: 36,
+      monsters: 24
+    }
   },
 
   // ---------------- INITIALIZATION & STORAGE ----------------
   init() {
+    this.normalizeAllData();
     this.loadState();
     this.applyTheme();
     if (this.state.characters.length === 0) {
@@ -48,6 +69,68 @@ const App = {
     this.updateStaticUILang();
     this.updateHeaderPill();
     this.render();
+  },
+
+  // Ujednolicenie i standaryzacja schematu wszystkich kolekcji danych
+  normalizeAllData() {
+    (window.DND_RACES || []).forEach(r => {
+      r.source = r.source || "PHB";
+      r.category = r.category || "Core";
+      r.wikidot_url = r.wikidot_url || `http://dnd5e.wikidot.com/lineage:${r.id}`;
+      r.detailed_traits = r.detailed_traits || (r.traits_pl || []).map((t, idx) => ({
+        name_pl: t.split(":")[0] || `Cecha ${idx + 1}`,
+        name_en: ((r.traits_en && r.traits_en[idx]) || t).split(":")[0],
+        desc_pl: t,
+        desc_en: (r.traits_en && r.traits_en[idx]) || t
+      }));
+    });
+    (window.DND_FEATS || []).forEach(f => {
+      f.source = f.source || "PHB";
+      f.category = f.category || f.source;
+      f.wikidot_url = f.wikidot_url || `http://dnd5e.wikidot.com/feat:${f.id}`;
+    });
+    (window.DND_MAGIC_ITEMS || []).forEach(it => {
+      it.category = it.category || "Wondrous Item";
+      it.rarity = it.rarity || "Rare";
+      it.wikidot_url = it.wikidot_url || `http://dnd5e.wikidot.com/wondrous-items:${it.id}`;
+    });
+    (window.DND_MONSTERS || []).forEach(m => {
+      m.type_en = m.type_en || "Monstrosity";
+      m.type_pl = m.type_pl || m.type_en;
+      m.cr_num = typeof m.cr_num === "number" ? m.cr_num : (parseFloat(m.cr) || 0);
+      m.aidedd_url = `https://www.aidedd.org/dnd/monstres.php?vo=${m.id}`;
+    });
+  },
+
+  setPageLimit(listKey, newLimit) {
+    this.state.pageLimits = this.state.pageLimits || { races: 24, feats: 24, items: 24, spells: 36, monsters: 24 };
+    this.state.pageLimits[listKey] = newLimit;
+    this.render();
+  },
+
+  renderPaginationBar(listKey, totalCount, shownCount, step = 24) {
+    if (totalCount <= step && shownCount >= totalCount) return "";
+    return `
+      <div class="std-pagination-bar no-print">
+        <div style="font-size:0.84rem;color:var(--text-main);">
+          📊 Ustandaryzowany widok listy: wyświetlono <strong style="color:var(--gold-bright);">${shownCount}</strong> z <strong>${totalCount}</strong> pozycji
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${shownCount < totalCount ? `
+            <button class="btn-secondary btn-sm" onclick="App.setPageLimit('${listKey}', ${shownCount + step})">
+              ➕ Pokaż kolejne ${Math.min(step, totalCount - shownCount)}
+            </button>
+            <button class="btn-primary btn-sm" onclick="App.setPageLimit('${listKey}', 9999)">
+              📚 Pokaż wszystkie (${totalCount})
+            </button>
+          ` : `
+            <button class="btn-ghost btn-sm" onclick="App.setPageLimit('${listKey}', ${step})">
+              🔼 Zwiń listę do pierwszych ${step}
+            </button>
+          `}
+        </div>
+      </div>
+    `;
   },
 
   ui(pl, en) {
@@ -129,6 +212,172 @@ const App = {
     reader.readAsDataURL(file);
   },
 
+  renderDetailedRaceCard(r, isSelected = false, selectable = false, fullExpanded = false) {
+    const isEn = this.state.lang === "en";
+    const isXL = Boolean(fullExpanded || this.state.raceForceXL);
+    const cType = isEn ? (r.creature_type_en || "Humanoid") : (r.creature_type_pl || "Humanoid");
+    const ageStr = isEn ? (r.age_en || "Standard lifespan (~80–100 years)") : (r.age_pl || "Standardowa długość życia (ok. 80–100 lat)");
+    const heightStr = isEn ? (r.height_en || r.size) : (r.height_pl || r.size);
+    const langStr = isEn ? (r.languages_en || "Common + 1 language") : (r.languages_pl || "Wspólny + 1 język");
+    const spdExtra = r.special_speeds_pl ? ` • ${r.special_speeds_pl}` : "";
+    const loreText = isEn ? (r.lore_en || "") : (r.lore_pl || "");
+    const dTraits = r.detailed_traits || [];
+    const primaryTraits = isXL ? dTraits : dTraits.slice(0, 2);
+    const extraTraits = isXL ? [] : dTraits.slice(2);
+    const hasSubTable = Boolean(r.suboptions_table && r.suboptions_table.length > 0);
+
+    return `
+      <div class="card race-card-2x2 ${isXL ? 'race-card-xl' : ''} ${isSelected ? 'selected' : ''}" ${selectable ? `onclick="App.setCharRace('${r.id}')" style="cursor:pointer;"` : ''}>
+        <div class="card-header" style="margin-bottom:4px;align-items:center;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <img src="${this.getRacePortrait(r.id)}" alt="${r.name_pl}" class="portrait-lg" style="width:72px;height:72px;">
+            <div>
+              <div class="card-title" style="font-size:1.18rem;">${this.t(r.name_pl, r.name_en)}</div>
+              <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">
+                📚 <strong>${r.source}</strong> • Kategoria: ${r.category || 'Core'} •
+                <a href="${r.wikidot_url}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold);font-weight:600;">Wikidot ↗</a>
+              </div>
+              <div class="badge-row" style="margin:6px 0 0;">
+                <span class="badge badge-arcane">⚡ ASI: ${r.asi_desc_pl}</span>
+                ${r.extra_hp_per_level ? `<span class="badge badge-emerald">❤️ +${r.extra_hp_per_level} PW/Poz.</span>` : ''}
+                ${r.ac_bonus ? `<span class="badge badge-gold">🛡️ +${r.ac_bonus} KP</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+              <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); App.openRaceDetailModal('${r.id}')" title="Otwórz dedykowaną podstronę rasy z pełnym opisem">
+                📖 Podstrona
+              </button>
+              ${selectable ? `
+                <span class="badge ${isSelected ? 'badge-emerald' : 'badge-gold'}" style="font-size:0.8rem;padding:5px 11px;">
+                  ${isSelected ? '✓ Wybrana' : 'Wybierz'}
+                </span>
+              ` : `<span class="badge badge-gold">${r.size}</span>`}
+            </div>
+          </div>
+        </div>
+
+        <!-- Standardized 6-Box Anatomical & Mechanical Vitals Strip -->
+        <div class="race-vitals-grid">
+          <div class="race-vital-item">
+            <span class="race-vital-lbl">🧬 Typ Istoty</span>
+            <span class="race-vital-val" style="color:${cType.includes('Humanoid') ? 'var(--gold-bright)' : 'var(--arcane-bright)'};">${cType}</span>
+          </div>
+          <div class="race-vital-item">
+            <span class="race-vital-lbl">📏 Rozmiar i Budowa</span>
+            <span class="race-vital-val">${heightStr}</span>
+          </div>
+          <div class="race-vital-item">
+            <span class="race-vital-lbl">🏃 Szybkość i Ruch</span>
+            <span class="race-vital-val">${r.speed} ft${spdExtra}</span>
+          </div>
+          <div class="race-vital-item">
+            <span class="race-vital-lbl">👁️ Zmysły / Darkvision</span>
+            <span class="race-vital-val" style="color:${r.darkvision >= 120 ? 'var(--cyan)' : 'var(--gold-bright)'};">${r.darkvision ? `Darkvision ${r.darkvision} ft` : 'Standardowy'}</span>
+          </div>
+          <div class="race-vital-item">
+            <span class="race-vital-lbl">⏳ Wiek</span>
+            <span class="race-vital-val" style="font-weight:500;color:var(--text-main);font-size:0.77rem;">${ageStr}</span>
+          </div>
+          <div class="race-vital-item">
+            <span class="race-vital-lbl">🗣️ Języki</span>
+            <span class="race-vital-val" style="font-weight:600;color:var(--text-main);font-size:0.78rem;">${langStr}</span>
+          </div>
+        </div>
+
+        ${loreText ? `
+          <div class="race-lore-box">
+            <strong>📖 Charakterystyka:</strong> ${loreText}
+          </div>
+        ` : ''}
+
+        <!-- Standardized Racial Traits (Core visible + Accordion for extra traits/tables) -->
+        <div>
+          <div style="font-family:var(--font-display);font-size:0.88rem;font-weight:700;color:var(--gold);margin-bottom:6px;">
+            ⚔️ Zdolności i Mechanika Rasowa (${dTraits.length}):
+          </div>
+          <div class="race-traits-grid">
+            ${primaryTraits.map(dt => `
+              <div class="race-trait-box">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                  <strong style="color:var(--gold-bright);font-size:0.9rem;">⚡ ${this.t(dt.name_pl, dt.name_en)}</strong>
+                  ${dt.tag_pl ? `<span class="badge badge-arcane" style="font-size:0.68rem;">${dt.tag_pl}</span>` : ''}
+                </div>
+                <div style="font-size:0.82rem;color:var(--text-main);line-height:1.52;">
+                  ${this.tDesc(dt)}
+                </div>
+              </div>
+            `).join("")}
+          </div>
+
+          ${(!isXL && (extraTraits.length > 0 || hasSubTable)) ? `
+            <details class="std-accordion" onclick="event.stopPropagation()">
+              <summary>
+                <span>📜 Dodatkowe cechy rasowe (${extraTraits.length})${hasSubTable ? ` + Tabela: ${r.suboptions_title_pl || 'Warianty'}` : ''}</span>
+              </summary>
+              <div class="std-accordion-body">
+                ${extraTraits.map(dt => `
+                  <div class="race-trait-box">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                      <strong style="color:var(--gold-bright);font-size:0.88rem;">⚡ ${this.t(dt.name_pl, dt.name_en)}</strong>
+                      ${dt.tag_pl ? `<span class="badge badge-arcane" style="font-size:0.68rem;">${dt.tag_pl}</span>` : ''}
+                    </div>
+                    <div style="font-size:0.81rem;color:var(--text-main);line-height:1.5;">
+                      ${this.tDesc(dt)}
+                    </div>
+                  </div>
+                `).join("")}
+                ${hasSubTable ? `
+                  <div class="wikidot-table-wrap" style="margin:4px 0 0;">
+                    <table class="wikidot-table">
+                      <thead>
+                        <tr>
+                          ${(r.suboptions_headers_pl || ["Wariant", "Cecha / Żywioł", "Działanie Mechaniczne"]).map(h => `<th>${h}</th>`).join("")}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${r.suboptions_table.map(row => `
+                          <tr>
+                            ${row.map((cell, cIdx) => `<td style="${cIdx === 0 ? 'font-weight:700;color:var(--gold-bright);white-space:nowrap;' : ''}">${cell}</td>`).join("")}
+                          </tr>
+                        `).join("")}
+                      </tbody>
+                    </table>
+                  </div>
+                ` : ''}
+              </div>
+            </details>
+          ` : ''}
+
+          ${(isXL && hasSubTable) ? `
+            <div style="margin-top:8px;">
+              <div style="font-family:var(--font-display);font-size:0.88rem;font-weight:700;color:var(--arcane-bright);margin-bottom:6px;">
+                📊 ${r.suboptions_title_pl || 'Warianty i Podtypy Rasowe'}:
+              </div>
+              <div class="wikidot-table-wrap" style="margin:0;">
+                <table class="wikidot-table">
+                  <thead>
+                    <tr>
+                      ${(r.suboptions_headers_pl || ["Wariant", "Cecha / Żywioł", "Działanie Mechaniczne"]).map(h => `<th>${h}</th>`).join("")}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${r.suboptions_table.map(row => `
+                      <tr>
+                        ${row.map((cell, cIdx) => `<td style="${cIdx === 0 ? 'font-weight:700;color:var(--gold-bright);white-space:nowrap;' : ''}">${cell}</td>`).join("")}
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  },
+
   updateStaticUILang() {
     const isEn = this.state.lang === "en";
     const setTxt = (id, pl, en) => {
@@ -142,6 +391,7 @@ const App = {
     setTxt("nav-lbl-builder", "Kreator & Rozwój", "Builder & Level Up");
     setTxt("nav-lbl-sheet", "Karta Postaci", "Character Sheet");
     setTxt("nav-lbl-spells", "Księga Zaklęć", "Spellbook");
+    setTxt("nav-lbl-bestiary", "Bestiariusz", "Bestiary");
     setTxt("nav-lbl-compendium", "Wikidot 5e", "Wikidot 5e");
     setTxt("dice-drawer-title", "🎲 Komnata Kości", "🎲 Dice Tray");
     setTxt("roll-mode-norm", "Normalny", "Normal");
@@ -545,16 +795,76 @@ const App = {
     return Math.ceil((level || 1) / 4) + 1;
   },
 
+  // ---------------- O(1) HASH-MAP INDEX CACHE (OPTYMALIZACJA WYDAJNOŚCI) ----------------
+  _indexCache: null,
+
+  ensureIndexCache() {
+    const cLen = (window.DND_CLASSES || []).length;
+    const rLen = (window.DND_RACES || []).length;
+    const bLen = (window.DND_BACKGROUNDS || []).length;
+    const fLen = (window.DND_FEATS || []).length;
+    const iLen = (window.DND_MAGIC_ITEMS || []).length;
+    const sLen = (window.DND_SPELLS || []).length;
+    const mLen = (window.DND_MONSTERS || []).length;
+    const condLen = (window.DND_CONDITIONS || []).length;
+
+    const sig = `${cLen}:${rLen}:${bLen}:${fLen}:${iLen}:${sLen}:${mLen}:${condLen}`;
+    if (this._indexCache && this._indexCache.sig === sig) {
+      return this._indexCache;
+    }
+
+    const mkMap = (arr) => {
+      const map = new Map();
+      if (Array.isArray(arr)) {
+        for (let i = 0; i < arr.length; i++) {
+          if (arr[i] && arr[i].id) map.set(arr[i].id, arr[i]);
+        }
+      }
+      return map;
+    };
+
+    this._indexCache = {
+      sig,
+      classes: mkMap(window.DND_CLASSES),
+      races: mkMap(window.DND_RACES),
+      bgs: mkMap(window.DND_BACKGROUNDS),
+      feats: mkMap(window.DND_FEATS),
+      items: mkMap(window.DND_MAGIC_ITEMS),
+      spells: mkMap(window.DND_SPELLS),
+      monsters: mkMap(window.DND_MONSTERS),
+      conditions: mkMap(window.DND_CONDITIONS)
+    };
+    return this._indexCache;
+  },
+
   getClassData(classId) {
-    return window.DND_CLASSES.find(c => c.id === classId) || window.DND_CLASSES[0];
+    return this.ensureIndexCache().classes.get(classId) || window.DND_CLASSES[0];
   },
 
   getRaceData(raceId) {
-    return window.DND_RACES.find(r => r.id === raceId) || window.DND_RACES[0];
+    return this.ensureIndexCache().races.get(raceId) || window.DND_RACES[0];
   },
 
   getBgData(bgId) {
-    return window.DND_BACKGROUNDS.find(b => b.id === bgId) || window.DND_BACKGROUNDS[0];
+    return this.ensureIndexCache().bgs.get(bgId) || window.DND_BACKGROUNDS[0];
+  },
+
+  getSpellById(spellId) {
+    if (!spellId) return null;
+    const cache = this.ensureIndexCache().spells;
+    return cache.get(spellId) || cache.get(String(spellId).toLowerCase()) || null;
+  },
+
+  getFeatById(featId) {
+    return this.ensureIndexCache().feats.get(featId) || null;
+  },
+
+  getMagicItemById(itemId) {
+    return this.ensureIndexCache().items.get(itemId) || null;
+  },
+
+  getMonsterById(monsterId) {
+    return this.ensureIndexCache().monsters.get(monsterId) || null;
   },
 
   getSubclassMechanics(subclassId) {
@@ -563,7 +873,8 @@ const App = {
 
   getCharMagicItems(char) {
     if (!char || !char.magicItems || !window.DND_MAGIC_ITEMS) return [];
-    return char.magicItems.map(id => window.DND_MAGIC_ITEMS.find(m => m.id === id)).filter(Boolean);
+    const itemMap = this.ensureIndexCache().items;
+    return char.magicItems.map(id => itemMap.get(id)).filter(Boolean);
   },
 
   getEffectiveAbilityScore(char, abId) {
@@ -592,7 +903,8 @@ const App = {
 
   getActiveConditions(char) {
     if (!char || !char.conditions || !window.DND_CONDITIONS) return [];
-    return char.conditions.map(id => window.DND_CONDITIONS.find(c => c.id === id)).filter(Boolean);
+    const condMap = this.ensureIndexCache().conditions;
+    return char.conditions.map(id => condMap.get(id)).filter(Boolean);
   },
 
   getConditionEffects(char) {
@@ -1403,35 +1715,75 @@ const App = {
     if (log) log.innerHTML = "";
   },
 
-  // ---------------- MAIN VIEW ROUTER ----------------
+  // ---------------- MAIN VIEW ROUTER (ZACHOWANIE FOKUSU I POMIAR CZASU RENDEROWANIA) ----------------
+  lastRenderTimeMs: 0,
+
   render() {
     const view = document.getElementById("main-view");
     if (!view) return;
 
+    const t0 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+
+    // Zachowaj fokus i pozycję kursora aktywnego pola wyszukiwania podczas przerenderowania DOM
+    const activeEl = document.activeElement;
+    let focusInfo = null;
+    if (activeEl && view.contains(activeEl) && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
+      focusInfo = {
+        id: activeEl.id || null,
+        placeholder: activeEl.getAttribute("placeholder") || null,
+        type: activeEl.getAttribute("type") || null,
+        selStart: typeof activeEl.selectionStart === "number" ? activeEl.selectionStart : null,
+        selEnd: typeof activeEl.selectionEnd === "number" ? activeEl.selectionEnd : null
+      };
+    }
+
+    let outHtml = "";
     switch (this.state.tab) {
       case "characters":
-        view.innerHTML = this.renderCharactersTab();
+        outHtml = this.renderCharactersTab();
         break;
       case "builder":
-        view.innerHTML = this.renderBuilderTab();
+        outHtml = this.renderBuilderTab();
         break;
       case "sheet":
-        view.innerHTML = this.renderSheetTab();
+        outHtml = this.renderSheetTab();
         break;
       case "spells":
-        view.innerHTML = this.renderSpellsTab();
+        outHtml = this.renderSpellsTab();
+        break;
+      case "bestiary":
+        outHtml = this.renderBestiaryTab();
         break;
       case "compendium":
-        view.innerHTML = this.renderCompendiumTab();
+        outHtml = this.renderCompendiumTab();
         break;
     }
 
     if (this.state.lang === "en") {
-      view.innerHTML = this.translateDOMHtmlToEn(view.innerHTML);
+      outHtml = this.translateDOMHtmlToEn(outHtml);
     }
     if (this.state.unitSystem === "metric") {
-      view.innerHTML = this.convertUnitsToMetric(view.innerHTML);
+      outHtml = this.convertUnitsToMetric(outHtml);
     }
+
+    // Pojedynczy zapis do DOM (brak podwójnego parsowania HTML przy trybie EN lub Metrycznym!)
+    view.innerHTML = outHtml;
+
+    if (focusInfo) {
+      let target = focusInfo.id ? document.getElementById(focusInfo.id) : null;
+      if (!target && focusInfo.placeholder) {
+        target = Array.from(view.querySelectorAll("input, textarea")).find(el => el.getAttribute("placeholder") === focusInfo.placeholder);
+      }
+      if (target) {
+        target.focus();
+        if (focusInfo.selStart !== null && typeof target.setSelectionRange === "function" && target.type !== "number") {
+          try { target.setSelectionRange(focusInfo.selStart, focusInfo.selEnd); } catch (_) {}
+        }
+      }
+    }
+
+    const t1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    this.lastRenderTimeMs = Math.round((t1 - t0) * 100) / 100;
   },
 
   translateDOMHtmlToEn(html) {
@@ -1622,7 +1974,7 @@ const App = {
             <span class="badge badge-emerald">❤️ PW: ${c.hpCurrent}/${c.hpMax}</span>
             <span class="badge badge-gold">🛡️ KP: ${ac}</span>
             <span class="badge badge-arcane">⚡ Biegłość: +${pb}</span>
-            <span class="badge badge-cyan">🔮 Czary: ${(c.knownSpells || []).length}</span>
+            <span class="badge badge-cyan" onclick="App.openCharacterSpellbook('${c.id}')" style="cursor:pointer;" title="Otwórz własną Księgę Zaklęć tej postaci">🔮 Księga Zaklęć: ${(c.knownSpells || []).length} ↗</span>
           </div>
 
           <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;text-align:center;background:var(--bg-deep);padding:8px;border-radius:8px;margin-bottom:14px;">
@@ -1635,6 +1987,7 @@ const App = {
 
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
             <button class="btn-primary btn-sm" onclick="App.selectCharacter('${c.id}', 'sheet')">📜 Otwórz Kartę</button>
+            <button class="btn-secondary btn-sm" onclick="App.openCharacterSpellbook('${c.id}')">📖 Księga Zaklęć (${(c.knownSpells || []).length})</button>
             <button class="btn-secondary btn-sm" onclick="App.selectCharacter('${c.id}', 'builder')">✨ Edytuj / Awansuj (Poz. ${c.level})</button>
             <button class="btn-ghost btn-sm" onclick="App.openLevelUpModal('${c.id}')">⬆️ Level Up</button>
             <button class="btn-danger btn-sm" onclick="App.deleteCharacter('${c.id}')" title="Usuń postać">🗑️</button>
@@ -1800,13 +2153,19 @@ const App = {
         </div>
 
         <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-          <h3 style="font-family:var(--font-display);color:var(--gold);">Wybierz Rasę / Rodowód (${filteredRaces.length} z ${window.DND_RACES.length} grywalnych ras z Wikidot 5e)</h3>
+          <div>
+            <h3 style="font-family:var(--font-display);color:var(--gold);">Wybierz Rasę / Rodowód (${filteredRaces.length} z ${window.DND_RACES.length} grywalnych ras z Wikidot 5e)</h3>
+            <p style="font-size:0.8rem;color:var(--text-muted);">Duże karty 2×2 z pełnymi danymi anatomicznymi i mechanicznymi. Najbardziej rozbudowane rasy (z tabelami podtypów i żywiołów) automatycznie rozszerzają się do rozmiaru XL.</p>
+          </div>
+          <button class="btn-secondary btn-sm" onclick="App.state.raceForceXL = !App.state.raceForceXL; App.render();">
+            ${this.state.raceForceXL ? '🔲 Układ 2×2 + Auto XL' : '🔳 Powiększ wszystkie karty na pełną szerokość (XL)'}
+          </button>
         </div>
 
         <div class="filter-bar">
           <div class="search-input-wrap">
             <span class="search-icon">🔍</span>
-            <input type="text" placeholder="Szukaj rasy (np. Bugbear, Shadar-kai, Tortle, Githyanki, Plasmoid, Elf, Fizban)..." value="${this.state.raceFilterSearch || ''}" oninput="App.state.raceFilterSearch=this.value;App.render();">
+            <input type="text" placeholder="Szukaj rasy, cechy lub podręcznika (np. Bugbear, Shadar-kai, Tortle, Githyanki, Plasmoid, Elf, Fizban)..." value="${this.state.raceFilterSearch || ''}" oninput="App.state.raceFilterSearch=this.value;App.render();">
           </div>
           <select onchange="App.state.raceFilterCat=this.value;App.render();">
             <option value="all" ${rfCat==='all'?'selected':''}>Wszystkie Kategorie Ras (${window.DND_RACES.length})</option>
@@ -1820,29 +2179,8 @@ const App = {
           </select>
         </div>
 
-        <div class="grid-cards">
-          ${filteredRaces.map(r => `
-            <div class="card ${char.raceId === r.id ? 'selected' : ''}" onclick="App.setCharRace('${r.id}')" style="cursor:pointer;">
-              <div class="card-header">
-                <div style="display:flex;align-items:center;gap:12px;">
-                  <img src="${this.getRacePortrait(r.id)}" alt="${r.name_pl}" class="portrait-thumb">
-                  <div>
-                    <div class="card-title">${this.t(r.name_pl, r.name_en)}</div>
-                    <span style="font-size:0.75rem;color:var(--text-muted);">${r.source} • <a href="${r.wikidot_url}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold);">Wikidot ↗</a></span>
-                  </div>
-                </div>
-                <span class="badge badge-gold">🏃 ${r.speed} ft</span>
-              </div>
-              <div class="badge-row">
-                <span class="badge badge-arcane">${r.asi_desc_pl}</span>
-                ${r.darkvision ? `<span class="badge badge-cyan">👁️ Darkvision ${r.darkvision} ft</span>` : ''}
-                <span class="badge">${r.size}</span>
-              </div>
-              <ul style="padding-left:18px;font-size:0.82rem;color:var(--text-main);margin-top:8px;">
-                ${(this.state.lang === 'en' ? r.traits_en : r.traits_pl).map(tr => `<li>${tr}</li>`).join("")}
-              </ul>
-            </div>
-          `).join("")}
+        <div class="grid-races-detailed ${this.state.raceForceXL ? 'all-xl' : ''}">
+          ${filteredRaces.map(r => this.renderDetailedRaceCard(r, char.raceId === r.id, true)).join("")}
         </div>
       `;
     }
@@ -1862,6 +2200,9 @@ const App = {
                     <span style="font-size:0.75rem;color:var(--text-muted);">Kość Wytrzymałości: <strong>k${c.hit_die}</strong> • Rzuty obronne: <strong>${c.saving_throws.join(", ")}</strong></span>
                   </div>
                 </div>
+                <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); App.openClassDetailModal('${c.id}')" title="Otwórz pełną podstronę klasy i tabelę rozwoju 1-20">
+                  📖 Podstrona Klasy
+                </button>
               </div>
               <div style="font-size:0.83rem;color:var(--text-main);margin-bottom:8px;">${this.tDesc(c)}</div>
               <div class="badge-row">
@@ -1874,38 +2215,17 @@ const App = {
         </div>
 
         <div class="card">
-          <h3 class="card-title" style="margin-bottom:8px;">${cls.icon} Wybierz Podklasę: ${this.t(cls.subclass_title_pl, cls.subclass_title_en)} (od ${cls.subclass_level}. poziomu)</h3>
-          <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;">Kliknij wybraną podklasę — aplikacja automatycznie doda jej bonusy do Inicjatywy, Klasy Pancerza, PW, umiejętności oraz zaklęcia domenowe/podklasowe i klikalne akcje na Karcie Postaci!</p>
-          <div class="grid-cards" style="margin-top:12px;">
-            ${(cls.subclasses || []).map(sc => {
-              const sMech = this.getSubclassMechanics(sc.id);
-              const bonusSpellsCount = sMech && sMech.spells_by_level ? Object.values(sMech.spells_by_level).flat().length : 0;
-              return `
-                <div class="card ${char.subclassId === sc.id ? 'selected' : ''}" onclick="App.setCharSubclass('${sc.id}')" style="cursor:pointer;background:var(--bg-deep);">
-                  <div class="card-header">
-                    <div class="card-title" style="font-size:1rem;">${this.t(sc.name_pl, sc.name_en)}</div>
-                    <span class="badge ${char.subclassId === sc.id ? 'badge-emerald' : 'badge-gold'}">${char.subclassId === sc.id ? '✓ Wybrana' : sc.source}</span>
-                  </div>
-                  <div class="badge-row">
-                    ${sMech && sMech.init_ability ? `<span class="badge badge-emerald">+${sMech.init_ability} do Inicjatywy</span>` : ''}
-                    ${sMech && sMech.init_prof_at_level ? `<span class="badge badge-emerald">+Biegłość do Inicjatywy</span>` : ''}
-                    ${sMech && sMech.ac_bonus_passive ? `<span class="badge badge-gold">+${sMech.ac_bonus_passive} do KP</span>` : ''}
-                    ${sMech && sMech.toggle_buff ? `<span class="badge badge-gold">🔥 Przełącznik Bojowy</span>` : ''}
-                    ${bonusSpellsCount ? `<span class="badge badge-arcane">🔮 +${bonusSpellsCount} Zaklęć Podklasy</span>` : ''}
-                  </div>
-                  <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:8px;">${this.tDesc(sc)}</div>
-                  ${sMech && sMech.features ? `
-                    <div style="border-top:1px solid var(--border-subtle);padding-top:8px;display:flex;flex-direction:column;gap:4px;">
-                      ${sMech.features.map(f => `
-                        <div style="font-size:0.76rem;color:var(--gold-bright);">
-                          ⚡ <strong>Poz. ${f.level}:</strong> ${this.tPlain(f.name_pl, f.name_en)} ${f.roll ? `<span class="badge badge-arcane" style="font-size:0.68rem;">🎲 ${f.roll}</span>` : ''}
-                        </div>
-                      `).join("")}
-                    </div>
-                  ` : ''}
-                </div>
-              `;
-            }).join("")}
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+            <div>
+              <h3 class="card-title" style="margin-bottom:4px;">${cls.icon} Wybierz Podklasę: ${this.t(cls.subclass_title_pl, cls.subclass_title_en)} (od ${cls.subclass_level}. poziomu)</h3>
+              <p style="font-size:0.8rem;color:var(--text-muted);">Duże karty 2×2 z kompletnym opisem wszystkich zdolności na każdym poziomie podklasy, zaklęciami podklasowymi i przyciskiem otwarcia pełnej podstrony.</p>
+            </div>
+            <button class="btn-secondary btn-sm" onclick="App.openClassDetailModal('${cls.id}')">
+              📖 Pełna Podstrona Klasy ${cls.name_pl} (Tabela 1–20)
+            </button>
+          </div>
+          <div class="grid-subclasses-detailed">
+            ${(cls.subclasses || []).map(sc => this.renderDetailedSubclassCard(cls, sc, char.subclassId === sc.id, true)).join("")}
           </div>
         </div>
       `;
@@ -2007,15 +2327,34 @@ const App = {
       stepContent = `
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;">
           <div class="card">
-            <h3 class="card-title" style="margin-bottom:10px;">📜 Pochodzenie / Tło (Background)</h3>
-            <select onchange="App.setCharBackground(this.value)" style="width:100%;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">
+              <h3 class="card-title">📜 Pochodzenie / Tło (Background — ${window.DND_BACKGROUNDS.length})</h3>
+              <button class="btn-secondary btn-sm" onclick="App.openBackgroundDetailModal('${char.backgroundId}')">
+                📖 Pełny Opis Tła
+              </button>
+            </div>
+            <select onchange="App.setCharBackground(this.value)" style="width:100%;margin-bottom:10px;">
               ${window.DND_BACKGROUNDS.map(b => `<option value="${b.id}" ${char.backgroundId===b.id?'selected':''}>${this.tPlain(b.name_pl, b.name_en)} (${b.skills.join(", ")})</option>`).join("")}
             </select>
-            <div style="background:var(--bg-deep);padding:12px;border-radius:8px;font-size:0.85rem;">
-              <p><strong>Biegłości z tła:</strong> ${bg.skills.join(", ")}</p>
-              <p><strong>Narzędzia / Języki:</strong> ${bg.tools_pl}</p>
-              <p><strong>Cecha tła:</strong> ${bg.feature_pl}</p>
-              <p style="margin-top:6px;color:var(--text-muted);">${bg.desc_pl}</p>
+            <div style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;padding-right:4px;margin-bottom:12px;">
+              ${window.DND_BACKGROUNDS.map(b => {
+                const isBgSel = char.backgroundId === b.id;
+                return `
+                  <div class="card ${isBgSel ? 'selected' : ''}" onclick="App.setCharBackground('${b.id}')" style="cursor:pointer;padding:11px 13px;background:var(--bg-deep);flex-shrink:0;">
+                    <div class="card-header" style="margin-bottom:4px;">
+                      <div class="card-title" style="font-size:0.94rem;">${this.t(b.name_pl, b.name_en)}</div>
+                      <div style="display:flex;gap:6px;align-items:center;">
+                        <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); App.openBackgroundDetailModal('${b.id}')" title="Otwórz podstronę tła">
+                          📖 Opis
+                        </button>
+                        <span class="badge ${isBgSel ? 'badge-emerald' : 'badge-arcane'}">${isBgSel ? '✓ Wybrane' : b.skills.join(", ")}</span>
+                      </div>
+                    </div>
+                    <div style="font-size:0.79rem;color:var(--text-main);"><strong>Cecha:</strong> ${b.feature_pl} • <strong>Narzędzia/Języki:</strong> ${b.tools_pl}</div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);margin-top:3px;">${b.desc_pl}</div>
+                  </div>
+                `;
+              }).join("")}
             </div>
 
             <h3 class="card-title" style="margin:18px 0 10px;">🎯 Umiejętności (Biegłość &amp; Ekspertyza)</h3>
@@ -2071,7 +2410,12 @@ const App = {
                   <div class="card ${hasFeat ? 'selected' : ''}" onclick="App.toggleCharFeat('${ft.id}')" style="cursor:pointer;padding:12px;background:var(--bg-deep);">
                     <div class="card-header" style="margin-bottom:6px;">
                       <div class="card-title" style="font-size:0.96rem;">${this.t(ft.name_pl, ft.name_en)}</div>
-                      <span class="badge ${hasFeat ? 'badge-emerald' : 'badge-gold'}">${hasFeat ? '✓ Posiadany' : ft.source}</span>
+                      <div style="display:flex;gap:6px;align-items:center;">
+                        <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); App.openFeatDetailModal('${ft.id}')" title="Otwórz podstronę atutu">
+                          📖 Opis
+                        </button>
+                        <span class="badge ${hasFeat ? 'badge-emerald' : 'badge-gold'}">${hasFeat ? '✓ Posiadany' : ft.source}</span>
+                      </div>
                     </div>
                     <div class="badge-row" style="margin:4px 0;">
                       ${ft.asi ? `<span class="badge badge-emerald">${ft.asi}</span>` : ''}
@@ -2229,16 +2573,32 @@ const App = {
         <div class="card" style="margin-top:18px;">
           <div class="card-header">
             <div>
-              <h3 class="card-title">💍 Magiczne Przedmioty (DMG / TCE / FTD — ${window.DND_MAGIC_ITEMS.length})</h3>
-              <p style="font-size:0.8rem;color:var(--text-muted);">Kliknij przedmiot, aby dodać go do ekwipunku postaci. Bonusy do KP, Cech (np. Rękawice Ogrzej Mocy = 19 SIŁ, Amulet Zdrowia = 19 KON), Rzutów Obronnych i ST Czarów doliczają się automatycznie!</p>
+              <h3 class="card-title">💍 Magiczne Przedmioty i Artefakty (DMG / TCE / XGE / FTD / EGW — ${window.DND_MAGIC_ITEMS.length})</h3>
+              <p style="font-size:0.8rem;color:var(--text-muted);">Kliknij przedmiot, aby dodać go do ekwipunku postaci. Bonusy do KP, Cech (np. Pas Siły Giganta = 21–29 SIŁ, Amulet Zdrowia = 19 KON), Rzutów Obronnych i ST Czarów doliczają się automatycznie!</p>
             </div>
-            <span class="badge badge-arcane">Zestrojone (Attunement): ${this.getCharMagicItems(char).filter(i => i.attunement).length} / 3</span>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button class="btn-primary btn-sm" onclick="App.openCustomMagicItemModal()">➕ Stwórz Własny Magiczny Przedmiot</button>
+              <span class="badge badge-arcane">Zestrojone (Attunement): ${this.getCharMagicItems(char).filter(i => i.attunement).length} / 3</span>
+            </div>
           </div>
           <div class="filter-bar">
             <div class="search-input-wrap">
               <span class="search-icon">🔍</span>
-              <input type="text" placeholder="Szukaj przedmiotu (np. Płaszcz Ochrony, Flame Tongue, Bag of Holding, +2, Amulet)..." value="${this.state.itemFilterSearch || ''}" oninput="App.state.itemFilterSearch=this.value;App.render();">
+              <input type="text" placeholder="Szukaj przedmiotu (np. Płaszcz Ochrony, Flame Tongue, Bag of Holding, Tatuaż, Vecna, +2, +3)..." value="${this.state.itemFilterSearch || ''}" oninput="App.state.itemFilterSearch=this.value;App.render();">
             </div>
+            <select onchange="App.state.itemFilterCat=this.value;App.render();">
+              <option value="all" ${(this.state.itemFilterCat||'all')==='all'?'selected':''}>Wszystkie Kategorie (${window.DND_MAGIC_ITEMS.length})</option>
+              <option value="Weapon" ${this.state.itemFilterCat==='Weapon'?'selected':''}>⚔️ Bronie Magiczne (Weapons)</option>
+              <option value="Armor" ${this.state.itemFilterCat==='Armor'?'selected':''}>🛡️ Pancerze i Tarcze (Armor &amp; Shields)</option>
+              <option value="Wondrous Item" ${this.state.itemFilterCat==='Wondrous Item'?'selected':''}>✨ Cudowne Przedmioty, Pasy, Płaszcze i Tatuaże</option>
+              <option value="Spellcasting Focus" ${this.state.itemFilterCat==='Spellcasting Focus'?'selected':''}>🔮 Fokusy Klasowe (+1/+2/+3)</option>
+              <option value="Ring" ${this.state.itemFilterCat==='Ring'?'selected':''}>💍 Pierścienie (Rings)</option>
+              <option value="Rod" ${this.state.itemFilterCat==='Rod'?'selected':''}>👑 Berła (Rods)</option>
+              <option value="Staff" ${this.state.itemFilterCat==='Staff'?'selected':''}>🪄 Kostury (Staves)</option>
+              <option value="Wand" ${this.state.itemFilterCat==='Wand'?'selected':''}>⚡ Różdżki (Wands)</option>
+              <option value="Potion" ${this.state.itemFilterCat==='Potion'?'selected':''}>🧪 Mikstury i Oleje (Potions)</option>
+              <option value="Artifact" ${this.state.itemFilterCat==='Artifact'?'selected':''}>🏆 Artefakty (Artifacts)</option>
+            </select>
             <select onchange="App.state.itemFilterRarity=this.value;App.render();">
               <option value="all" ${(this.state.itemFilterRarity||'all')==='all'?'selected':''}>Wszystkie Rzadkości (${window.DND_MAGIC_ITEMS.length})</option>
               <option value="Common" ${this.state.itemFilterRarity==='Common'?'selected':''}>Pospolite (Common)</option>
@@ -2246,13 +2606,16 @@ const App = {
               <option value="Rare" ${this.state.itemFilterRarity==='Rare'?'selected':''}>Rzadkie (Rare)</option>
               <option value="Very Rare" ${this.state.itemFilterRarity==='Very Rare'?'selected':''}>Bardzo Rzadkie (Very Rare)</option>
               <option value="Legendary" ${this.state.itemFilterRarity==='Legendary'?'selected':''}>Legendarne (Legendary)</option>
+              <option value="Artifact" ${this.state.itemFilterRarity==='Artifact'?'selected':''}>Artefakty (Artifact)</option>
             </select>
           </div>
-          <div class="grid-cards">
-            ${window.DND_MAGIC_ITEMS.filter(it => {
+          ${(() => {
+            const filteredItems = window.DND_MAGIC_ITEMS.filter(it => {
               const ir = this.state.itemFilterRarity || "all";
+              const ic = this.state.itemFilterCat || "all";
               const is = (this.state.itemFilterSearch || "").toLowerCase();
               if (ir !== "all" && it.rarity !== ir) return false;
+              if (ic !== "all" && it.category !== ic) return false;
               if (is) {
                 const m = (it.name_pl || "").toLowerCase().includes(is) ||
                           (it.name_en || "").toLowerCase().includes(is) ||
@@ -2261,26 +2624,39 @@ const App = {
                 if (!m) return false;
               }
               return true;
-            }).map(it => {
-              const equipped = (char.magicItems || []).includes(it.id);
-              return `
-                <div class="card ${equipped ? 'selected' : ''}" onclick="App.toggleCharMagicItem('${it.id}')" style="cursor:pointer;background:var(--bg-deep);">
-                  <div class="card-header">
-                    <div class="card-title" style="font-size:0.98rem;">${this.t(it.name_pl, it.name_en)}</div>
-                    <span class="badge ${equipped ? 'badge-emerald' : 'badge-gold'}">${equipped ? '✓ Wyposażony' : it.rarity}</span>
-                  </div>
-                  <div class="badge-row">
-                    <span class="badge">${it.category}</span>
-                    ${it.attunement ? `<span class="badge badge-arcane">🔗 Zestrojenie</span>` : `<span class="badge badge-cyan">Bez zestrojenia</span>`}
-                    ${it.bonus_ac ? `<span class="badge badge-gold">+${it.bonus_ac} KP</span>` : ''}
-                    ${it.bonus_saves ? `<span class="badge badge-emerald">+${it.bonus_saves} Rzuty Obronne</span>` : ''}
-                    ${it.bonus_spell_dc ? `<span class="badge badge-arcane">+${it.bonus_spell_dc} ST Czarów</span>` : ''}
-                  </div>
-                  <div style="font-size:0.81rem;color:var(--text-muted);margin-top:6px;">${this.tDesc(it)}</div>
-                </div>
-              `;
-            }).join("")}
-          </div>
+            });
+            const lim = (this.state.pageLimits && this.state.pageLimits.items) || 24;
+            const visibleItems = filteredItems.slice(0, lim);
+            return `
+              <div class="grid-cards">
+                ${visibleItems.map(it => {
+                  const equipped = (char.magicItems || []).includes(it.id);
+                  return `
+                    <div class="card ${equipped ? 'selected' : ''}" onclick="App.toggleCharMagicItem('${it.id}')" style="cursor:pointer;background:var(--bg-deep);">
+                      <div class="card-header">
+                        <div class="card-title" style="font-size:0.98rem;">${this.t(it.name_pl, it.name_en)}</div>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                          <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); App.openMagicItemDetailModal('${it.id}')" title="Otwórz pełny opis przedmiotu">
+                            📖 Opis
+                          </button>
+                          <span class="badge ${equipped ? 'badge-emerald' : 'badge-gold'}">${equipped ? '✓ Wyposażony' : it.rarity}</span>
+                        </div>
+                      </div>
+                      <div class="badge-row">
+                        <span class="badge">${it.category}</span>
+                        ${it.attunement ? `<span class="badge badge-arcane">🔗 Zestrojenie</span>` : `<span class="badge badge-cyan">Bez zestrojenia</span>`}
+                        ${it.bonus_ac ? `<span class="badge badge-gold">+${it.bonus_ac} KP</span>` : ''}
+                        ${it.bonus_saves ? `<span class="badge badge-emerald">+${it.bonus_saves} Rzuty Obronne</span>` : ''}
+                        ${it.bonus_spell_dc ? `<span class="badge badge-arcane">+${it.bonus_spell_dc} ST Czarów</span>` : ''}
+                      </div>
+                      <div style="font-size:0.81rem;color:var(--text-muted);margin-top:6px;">${this.tDesc(it)}</div>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+              ${this.renderPaginationBar('items', filteredItems.length, visibleItems.length, 24)}
+            `;
+          })()}
         </div>
       `;
     }
@@ -2291,9 +2667,10 @@ const App = {
           <h1 class="section-title">✨ Kreator &amp; Rozwój Postaci: ${char.name}</h1>
           <p class="section-subtitle">${this.tPlain(race.name_pl, race.name_en)} • ${this.tPlain(cls.name_pl, cls.name_en)} (Poziom ${char.level})</p>
         </div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-secondary btn-sm" onclick="App.switchTab('sheet')">📜 Widok Karty Postaci</button>
-          <button class="btn-primary btn-sm" onclick="App.switchTab('spells')">🔮 Wybierz Zaklęcia</button>
+          <button class="btn-primary btn-sm" onclick="App.openCharacterSpellbook('${char.id}')">📖 Księga Zaklęć Postaci (${(char.knownSpells || []).length})</button>
+          <button class="btn-ghost btn-sm" onclick="App.openFullSpellbook('${cls.caster_type !== 'none' ? cls.id : 'all'}')">➕ Pełna Baza Zaklęć</button>
         </div>
       </div>
 
@@ -2684,8 +3061,9 @@ const App = {
           </div>
 
           <div class="no-print" style="display:flex;flex-wrap:wrap;gap:8px;">
+            <button class="btn-primary btn-sm" onclick="App.openCharacterSpellbook('${char.id}')">📖 Księga Zaklęć Postaci (${(char.knownSpells || []).length})</button>
             <button class="btn-secondary btn-sm" onclick="App.shortRest()">⛺ Krótki Odpoczynek</button>
-            <button class="btn-primary btn-sm" onclick="App.longRest()">🌙 Długi Odpoczynek</button>
+            <button class="btn-secondary btn-sm" onclick="App.longRest()">🌙 Długi Odpoczynek</button>
             <button class="btn-ghost btn-sm" onclick="App.openLevelUpModal()">⬆️ Awansuj (Poz. ${char.level})</button>
             <button class="btn-ghost btn-sm" onclick="window.print()">🖨️ Drukuj / PDF</button>
           </div>
@@ -2968,71 +3346,79 @@ const App = {
             </div>
           </div>
 
-          <!-- Spellcasting & Spell Slots on Sheet -->
-          ${spellAb ? `
-            <div class="card" style="margin-bottom:16px;">
-              <div class="card-header">
-                <div>
-                  <h3 class="card-title">🔮 Rzucanie Zaklęć (${spellAb})</h3>
-                  <span style="font-size:0.8rem;color:var(--text-muted);">Kliknij komórkę czaru, aby ją zużyć lub odnowić</span>
-                </div>
-                <div class="badge-row" style="margin:0;">
+          <!-- Spellcasting & Spell Slots on Sheet (Always available so every character can open their personal Spellbook) -->
+          <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+              <div>
+                <h3 class="card-title">🔮 Księga Zaklęć i Magia Bohatera ${spellAb ? `(${spellAb})` : ''}</h3>
+                <span style="font-size:0.8rem;color:var(--text-muted);">
+                  ${spellAb ? 'Kliknij komórkę czaru, aby ją zużyć lub odnowić, albo otwórz pełny widok Księgi Zaklęć tej postaci' : 'Zaklęcia rasowe, z atutów lub przedmiotów przypisane do tej postaci'}
+                </span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                ${spellAb ? `
                   <span class="badge badge-gold">ST Czarów (DC): <strong>${spellSaveDC}</strong></span>
                   <span class="badge badge-arcane" style="cursor:pointer;" onclick="App.rollDie(20, ${spellAtkBonus}, 'Atak Czarem', 'attack')">Atak Czarem: <strong>${this.fmtMod(spellAtkBonus)}${condFx.blessBonus ? '+k4' : ''}${condFx.banePenalty ? '-k4' : ''}</strong> 🎲</span>
-                </div>
-              </div>
-
-              ${char.classId === "warlock" ? `
-                <div style="display:flex;align-items:center;gap:12px;background:var(--bg-deep);padding:10px 14px;border-radius:8px;margin-bottom:12px;">
-                  <span style="font-weight:700;color:var(--arcane-bright);">Komórki Magii Paktu (${progRow.pact_level}. Kręgu):</span>
-                  <div class="slot-pip-group">
-                    ${Array.from({length: progRow.pact_slots || 2}, (_, idx) => {
-                      const used = (char.usedSlots && char.usedSlots.pact || 0) > idx;
-                      return `<div class="slot-pip ${used ? 'used' : ''}" onclick="App.toggleSpellSlot('pact', ${idx}, ${progRow.pact_slots || 2})"></div>`;
-                    }).join("")}
-                  </div>
-                </div>
-              ` : (progRow.slots ? `
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px;">
-                  ${progRow.slots.map((maxCount, idx) => {
-                    if (!maxCount) return "";
-                    const circle = idx + 1;
-                    const usedCount = (char.usedSlots && char.usedSlots[circle]) || 0;
-                    return `
-                      <div style="background:var(--bg-deep);padding:8px 10px;border-radius:8px;border:1px solid var(--border-subtle);">
-                        <div style="font-size:0.75rem;color:var(--gold);font-weight:700;margin-bottom:4px;">Krąg ${circle} (${maxCount - usedCount}/${maxCount})</div>
-                        <div class="slot-pip-group">
-                          ${Array.from({length: maxCount}, (_, pipIdx) => `
-                            <div class="slot-pip ${pipIdx < usedCount ? 'used' : ''}" onclick="App.toggleSpellSlot(${circle}, ${pipIdx}, ${maxCount})"></div>
-                          `).join("")}
-                        </div>
-                      </div>
-                    `;
-                  }).join("")}
-                </div>
-              ` : '')}
-
-              <!-- Prepared Spells Grouped by Circle -->
-              <div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                  <strong style="font-size:0.86rem;color:var(--text-main);">Znane / Przygotowane Zaklęcia (${(char.knownSpells || []).length})</strong>
-                  <button class="btn-ghost btn-sm no-print" onclick="App.switchTab('spells')">➕ Zarządzaj w Księdze Zaklęć</button>
-                </div>
-                <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                  ${(char.knownSpells || []).map(spId => {
-                    const sp = window.DND_SPELLS.find(s => s.id === spId);
-                    if (!sp) return "";
-                    return `
-                      <span class="badge ${sp.level === 0 ? 'badge-cyan' : 'badge-arcane'}" style="cursor:pointer;padding:5px 10px;font-size:0.78rem;" onclick="App.openSpellModal('${sp.id}')">
-                        [${sp.level === 0 ? 'Szt' : sp.level + ' kr'}] ${this.tPlain(sp.name_pl, sp.name_en)}
-                        ${sp.dice ? `<strong style="color:var(--gold);margin-left:4px;">(${sp.dice})</strong>` : ''}
-                      </span>
-                    `;
-                  }).join("")}
-                </div>
+                ` : ''}
+                <button class="btn-primary btn-sm no-print" onclick="App.openCharacterSpellbook('${char.id}')">
+                  📖 Otwórz Księgę Zaklęć Postaci (${(char.knownSpells || []).length}) →
+                </button>
               </div>
             </div>
-          ` : ''}
+
+            ${spellAb && char.classId === "warlock" ? `
+              <div style="display:flex;align-items:center;gap:12px;background:var(--bg-deep);padding:10px 14px;border-radius:8px;margin-bottom:12px;">
+                <span style="font-weight:700;color:var(--arcane-bright);">Komórki Magii Paktu (${progRow.pact_level}. Kręgu):</span>
+                <div class="slot-pip-group">
+                  ${Array.from({length: progRow.pact_slots || 2}, (_, idx) => {
+                    const used = (char.usedSlots && char.usedSlots.pact || 0) > idx;
+                    return `<div class="slot-pip ${used ? 'used' : ''}" onclick="App.toggleSpellSlot('pact', ${idx}, ${progRow.pact_slots || 2})"></div>`;
+                  }).join("")}
+                </div>
+              </div>
+            ` : (spellAb && progRow.slots ? `
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px;">
+                ${progRow.slots.map((maxCount, idx) => {
+                  if (!maxCount) return "";
+                  const circle = idx + 1;
+                  const usedCount = (char.usedSlots && char.usedSlots[circle]) || 0;
+                  return `
+                    <div style="background:var(--bg-deep);padding:8px 10px;border-radius:8px;border:1px solid var(--border-subtle);">
+                      <div style="font-size:0.75rem;color:var(--gold);font-weight:700;margin-bottom:4px;">Krąg ${circle} (${maxCount - usedCount}/${maxCount})</div>
+                      <div class="slot-pip-group">
+                        ${Array.from({length: maxCount}, (_, pipIdx) => `
+                          <div class="slot-pip ${pipIdx < usedCount ? 'used' : ''}" onclick="App.toggleSpellSlot(${circle}, ${pipIdx}, ${maxCount})"></div>
+                        `).join("")}
+                      </div>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+            ` : '')}
+
+            <!-- Prepared Spells Grouped by Circle -->
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                <strong style="font-size:0.86rem;color:var(--text-main);">Znane / Przygotowane Zaklęcia (${(char.knownSpells || []).length})</strong>
+                <div class="no-print" style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <button class="btn-secondary btn-sm" onclick="App.openCharacterSpellbook('${char.id}')">📖 Widok Księgi Postaci (${(char.knownSpells || []).length})</button>
+                  <button class="btn-ghost btn-sm" onclick="App.openFullSpellbook('${cls.caster_type !== 'none' ? cls.id : 'all'}')">➕ Dodaj z Pełnej Księgi Zaklęć</button>
+                </div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                ${(char.knownSpells || []).length === 0 ? `<span style="font-size:0.8rem;color:var(--text-muted);">Brak przypisanych zaklęć — kliknij „➕ Dodaj z Pełnej Księgi Zaklęć”, aby wybrać czary.</span>` : (char.knownSpells || []).map(spId => {
+                  const sp = this.getSpellById(spId);
+                  if (!sp) return "";
+                  return `
+                    <span class="badge ${sp.level === 0 ? 'badge-cyan' : 'badge-arcane'}" style="cursor:pointer;padding:5px 10px;font-size:0.78rem;" onclick="App.openSpellModal('${sp.id}')">
+                      [${sp.level === 0 ? 'Szt' : sp.level + ' kr'}] ${this.tPlain(sp.name_pl, sp.name_en)}
+                      ${sp.dice ? `<strong style="color:var(--gold);margin-left:4px;">(${sp.dice})</strong>` : ''}
+                    </span>
+                  `;
+                }).join("")}
+              </div>
+            </div>
+          </div>
 
           <!-- Class Progression Features & Feats -->
           <div class="card">
@@ -3046,7 +3432,7 @@ const App = {
               `).join("")}
 
               ${(char.feats || []).map(fId => {
-                const ft = window.DND_FEATS.find(x => x.id === fId);
+                const ft = this.getFeatById(fId);
                 if (!ft) return "";
                 return `
                   <div style="background:var(--bg-deep);padding:10px 12px;border-radius:8px;border-left:3px solid var(--arcane);">
@@ -3277,19 +3663,45 @@ const App = {
   },
 
   // ============================================================================
-  // TAB 4: KSIĘGA ZAKLĘĆ (KRĘGI 0–9, KLASY, SZKOŁY, FILTRY)
+  // TAB 4: KSIĘGA ZAKLĘĆ (KRĘGI 0–9, KLASY, SZKOŁY, FILTRY + WŁASNA KSIĘGA POSTACI)
   // ============================================================================
+  openCharacterSpellbook(charId = null) {
+    if (charId) {
+      this.state.activeCharId = charId;
+    }
+    this.state.spellFilters.onlyCharSpells = true;
+    this.state.spellFilters.level = "all";
+    this.state.spellFilters.classId = "all";
+    this.state.spellFilters.school = "all";
+    this.state.spellFilters.ritualOnly = false;
+    this.state.spellFilters.concOnly = false;
+    this.state.spellFilters.search = "";
+    this.saveState();
+    this.switchTab("spells");
+  },
+
+  openFullSpellbook(classId = "all") {
+    this.state.spellFilters.onlyCharSpells = false;
+    this.state.spellFilters.classId = classId || "all";
+    this.state.spellFilters.level = "all";
+    this.switchTab("spells");
+  },
+
   renderSpellsTab() {
     const char = this.getActiveChar();
+    const cls = char ? this.getClassData(char.classId) : null;
     const f = this.state.spellFilters;
 
-    const filtered = window.DND_SPELLS.filter(sp => {
+    const basePool = (f.onlyCharSpells && char)
+      ? window.DND_SPELLS.filter(s => (char.knownSpells || []).includes(s.id))
+      : window.DND_SPELLS;
+
+    const filtered = basePool.filter(sp => {
       if (f.level !== "all" && sp.level !== parseInt(f.level, 10)) return false;
       if (f.classId !== "all" && !sp.classes.includes(f.classId)) return false;
       if (f.school !== "all" && sp.school !== f.school) return false;
       if (f.ritualOnly && !sp.ritual) return false;
       if (f.concOnly && !sp.concentration) return false;
-      if (f.onlyCharSpells && char && !(char.knownSpells || []).includes(sp.id)) return false;
       if (f.search.trim()) {
         const q = f.search.toLowerCase();
         const matchName = (sp.name_pl || "").toLowerCase().includes(q) || (sp.name_en || "").toLowerCase().includes(q);
@@ -3307,25 +3719,71 @@ const App = {
     });
 
     const circleCounts = {};
-    window.DND_SPELLS.forEach(s => {
+    basePool.forEach(s => {
       circleCounts[s.level] = (circleCounts[s.level] || 0) + 1;
     });
 
     return `
       <div class="section-header">
         <div>
-          <h1 class="section-title">🔮 Księga Zaklęć D&amp;D 5e (Wikidot Spellbook)</h1>
-          <p class="section-subtitle">Zaklęcia podzielone na Kręgi (0–9), Klasy, Szkoły Magii, Rytuały i Koncentrację. Przypisuj czary do aktywnej postaci i rzucaj nimi bezpośrednio z karty.</p>
+          <h1 class="section-title">
+            ${f.onlyCharSpells && char ? `📖 Księga Zaklęć Bohatera: ${char.name}` : '🔮 Księga Zaklęć D&amp;D 5e (Wikidot Spellbook)'}
+          </h1>
+          <p class="section-subtitle">
+            ${f.onlyCharSpells && char
+              ? `Wyświetlasz tylko zaklęcia przypisane do postaci ${char.name} (${(char.knownSpells||[]).length} zaklęć z podziałem na Kręgi 0–9).`
+              : 'Duże karty zaklęć 2×2 z pełnym opisem działania. Zaklęcia o rozbudowanych opisach automatycznie rozszerzają się do szerokiego kafelka XL.'}
+          </p>
         </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn-secondary btn-sm" onclick="App.openAddCustomSpellModal()">➕ Dodaj Zaklęcie z Wikidot</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${char ? `
+            <button class="${f.onlyCharSpells ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="App.openCharacterSpellbook('${char.id}')">
+              📖 Własna Księga: ${char.name} (${(char.knownSpells||[]).length})
+            </button>
+            <button class="${!f.onlyCharSpells ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="App.openFullSpellbook('all')">
+              📚 Wszystkie Zaklęcia D&amp;D 5e (${window.DND_SPELLS.length})
+            </button>
+          ` : ''}
+          <button class="btn-secondary btn-sm" onclick="App.state.spellForceXL = !App.state.spellForceXL; App.render();">
+            ${this.state.spellForceXL ? '🔲 Układ 2×2 + Auto XL' : '🔳 Powiększ wszystkie zaklęcia (XL)'}
+          </button>
+          <button class="btn-ghost btn-sm" onclick="App.openAddCustomSpellModal()">➕ Dodaj Własne Zaklęcie</button>
         </div>
       </div>
+
+      ${f.onlyCharSpells && char ? `
+        <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg, rgba(139,92,246,0.14), rgba(229,193,88,0.09));border-color:var(--border-gold);">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              ${this.renderCharacterPortrait(char, 54)}
+              <div>
+                <div style="font-family:var(--font-display);font-weight:700;font-size:1.1rem;color:var(--gold-bright);">
+                  📜 Osobista Księga Zaklęć: ${char.name} (${cls ? this.tPlain(cls.name_pl, cls.name_en) : ''} Poz. ${char.level})
+                </div>
+                <div style="font-size:0.8rem;color:var(--text-muted);">
+                  Liczba przypisanych zaklęć: <strong>${(char.knownSpells||[]).length}</strong> • Możesz rzucać kośćmi obrażeń/leczenia bezpośrednio z kart poniżej lub przełączyć na pełną bazę, aby dodać nowe czary.
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn-secondary btn-sm" onclick="App.switchTab('sheet')">← Wróć do Karty Postaci</button>
+              ${cls && cls.caster_type !== 'none' ? `
+                <button class="btn-primary btn-sm" onclick="App.openFullSpellbook('${cls.id}')">
+                  ➕ Przeglądaj zaklęcia klasy ${cls.name_pl.split(" ")[0]}
+                </button>
+              ` : ''}
+              <button class="btn-ghost btn-sm" onclick="App.openFullSpellbook('all')">
+                📚 Pokaż pełną bazę (${window.DND_SPELLS.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      ` : ''}
 
       <!-- Circle Selector Bar (0-9) -->
       <div class="spell-circles-bar">
         <button class="circle-pill ${f.level === 'all' ? 'active' : ''}" onclick="App.setSpellFilter('level', 'all')">
-          Wszystkie Kręgi (${window.DND_SPELLS.length})
+          ${f.onlyCharSpells ? `Wszystkie Kręgi Postaci (${basePool.length})` : `Wszystkie Kręgi (${window.DND_SPELLS.length})`}
         </button>
         <button class="circle-pill ${f.level === '0' ? 'active' : ''}" onclick="App.setSpellFilter('level', '0')">
           0. Sztuczki / Cantrips (${circleCounts[0] || 0})
@@ -3387,48 +3845,84 @@ const App = {
             <h2 style="font-family:var(--font-display);font-size:1.25rem;color:var(--gold);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border-subtle);">
               ${headerTitle} <span class="badge badge-gold">${list.length}</span>
             </h2>
-            <div class="grid-cards">
+            <div class="grid-spells-detailed ${this.state.spellForceXL ? 'all-xl' : ''}">
               ${list.map(sp => {
                 const sch = window.DND_SPELL_SCHOOLS[sp.school] || { pl: sp.school, icon: "✨" };
                 const isKnown = char && (char.knownSpells || []).includes(sp.id);
+                const descLen = ((sp.desc_pl || "").length + (this.state.lang === "pl_en" ? (sp.desc_en || "").length : 0));
+                const isXL = Boolean(this.state.spellForceXL || sp.xl || descLen > 340 || (sp.desc_pl || "").length > 230);
                 return `
-                  <div class="card ${isKnown ? 'selected' : ''}">
-                    <div class="card-header">
-                      <div onclick="App.openSpellModal('${sp.id}')" style="cursor:pointer;">
-                        <div class="card-title">${this.t(sp.name_pl, sp.name_en)}</div>
-                        <span style="font-size:0.75rem;color:var(--text-muted);">${sch.icon} ${sch.pl} • ${sp.time} • ${sp.range}</span>
+                  <div class="card spell-card-2x2 ${isXL ? 'spell-card-xl' : ''} ${isKnown ? 'selected' : ''}">
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                      <div class="card-header" style="margin-bottom:0;">
+                        <div onclick="App.openSpellModal('${sp.id}')" style="cursor:pointer;">
+                          <div class="card-title" style="font-size:1.15rem;">${this.t(sp.name_pl, sp.name_en)}</div>
+                          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">
+                            ${sch.icon} <strong>${sch.pl}</strong> (${sp.school}) •
+                            <a href="http://dnd5e.wikidot.com/spell:${sp.id}" target="_blank" onclick="event.stopPropagation()" style="color:var(--gold);">Wikidot ↗</a>
+                          </div>
+                        </div>
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+                          <button class="btn-secondary btn-sm" onclick="App.openSpellModal('${sp.id}')" title="Otwórz dedykowaną podstronę zaklęcia">
+                            📖 Podstrona
+                          </button>
+                          <span class="badge ${sp.level === 0 ? 'badge-cyan' : 'badge-gold'}" style="font-size:0.8rem;padding:5px 10px;">
+                            ${sp.level === 0 ? 'Sztuczka (Krąg 0)' : sp.level + '. Krąg'}
+                          </span>
+                          ${isXL ? `<span class="badge badge-arcane" style="font-size:0.68rem;">📜 Karta XL</span>` : ''}
+                        </div>
                       </div>
-                      <span class="badge ${sp.level === 0 ? 'badge-cyan' : 'badge-gold'}">${sp.level === 0 ? 'Sztuczka' : sp.level + '. Krąg'}</span>
-                    </div>
 
-                    <div class="badge-row">
-                      ${sp.concentration ? `<span class="badge badge-crimson">🧠 Koncentracja</span>` : ''}
-                      ${sp.ritual ? `<span class="badge badge-emerald">🕯️ Rytuał</span>` : ''}
-                      <span class="badge">${sp.components}</span>
-                      ${sp.damage_type ? `<span class="badge badge-arcane">${sp.damage_type}</span>` : ''}
-                    </div>
-
-                    <div style="font-size:0.82rem;color:var(--text-main);margin:8px 0 12px;max-height:110px;overflow-y:auto;">
-                      ${this.tDesc(sp)}
-                    </div>
-
-                    <div style="font-size:0.73rem;color:var(--text-muted);margin-bottom:10px;">
-                      <strong>Klasy:</strong> ${sp.classes.map(cid => {
-                        const cObj = window.DND_CLASSES.find(x => x.id === cid);
-                        return cObj ? cObj.name_pl.split(" ")[0] : cid;
-                      }).join(", ")}
-                    </div>
-
-                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                      <div style="display:flex;gap:6px;">
-                        ${sp.dice ? `<button class="btn-primary btn-sm" onclick="App.rollCustomFormula('${sp.dice}', '${sp.name_pl}')">🎲 Rzuć ${sp.dice}</button>` : ''}
-                        <button class="btn-ghost btn-sm" onclick="App.openSpellModal('${sp.id}')">📖 Szczegóły</button>
+                      <div class="badge-row" style="margin:0;">
+                        ${sp.concentration ? `<span class="badge badge-crimson">🧠 Wymaga Koncentracji</span>` : ''}
+                        ${sp.ritual ? `<span class="badge badge-emerald">🕯️ Rytuał (+10 min)</span>` : ''}
+                        ${sp.damage_type ? `<span class="badge badge-arcane">💥 Typ: ${sp.damage_type}</span>` : ''}
+                        ${sp.dice ? `<span class="badge badge-gold">🎲 Kości: ${sp.dice.replace(/d/g,'k')}</span>` : ''}
                       </div>
-                      ${char ? `
-                        <button class="${isKnown ? 'btn-secondary' : 'btn-ghost'} btn-sm" onclick="App.toggleCharSpell('${sp.id}')">
-                          ${isKnown ? '✓ W Księdze' : '➕ Do Postaci'}
-                        </button>
-                      ` : ''}
+
+                      <div class="spell-meta-grid">
+                        <div class="spell-meta-item">
+                          <span class="spell-meta-lbl">⏱️ Czas Rzucania</span>
+                          <span class="spell-meta-val">${sp.time}</span>
+                        </div>
+                        <div class="spell-meta-item">
+                          <span class="spell-meta-lbl">📏 Zasięg / Obszar</span>
+                          <span class="spell-meta-val">${sp.range}</span>
+                        </div>
+                        <div class="spell-meta-item">
+                          <span class="spell-meta-lbl">🔮 Komponenty</span>
+                          <span class="spell-meta-val">${sp.components}</span>
+                        </div>
+                        <div class="spell-meta-item">
+                          <span class="spell-meta-lbl">⏳ Czas Trwania</span>
+                          <span class="spell-meta-val">${sp.duration}</span>
+                        </div>
+                      </div>
+
+                      <div class="spell-desc-box">
+                        ${this.tDesc(sp)}
+                      </div>
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--border-subtle);padding-top:10px;">
+                      <div style="font-size:0.77rem;color:var(--text-muted);">
+                        <strong>Dostępne dla klas:</strong> ${sp.classes.map(cid => {
+                          const cObj = this.getClassData(cid);
+                          return cObj ? `<span style="color:var(--gold-bright);font-weight:600;">${cObj.icon} ${cObj.name_pl.split(" ")[0]}</span>` : cid;
+                        }).join(" • ")}
+                      </div>
+
+                      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                          ${sp.dice ? `<button class="btn-primary btn-sm" onclick="App.rollCustomFormula('${sp.dice}', '${sp.name_pl.replace(/'/g, "\\'")}')">🎲 Rzuć ${sp.dice.replace(/d/g,'k')}</button>` : ''}
+                          <button class="btn-ghost btn-sm" onclick="App.openSpellModal('${sp.id}')">📖 Pełny Opis / Podstrona</button>
+                        </div>
+                        ${char ? `
+                          <button class="${isKnown ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="App.toggleCharSpell('${sp.id}')">
+                            ${isKnown ? '✓ W Księdze Postaci' : '➕ Dodaj do Postaci'}
+                          </button>
+                        ` : ''}
+                      </div>
                     </div>
                   </div>
                 `;
@@ -3590,6 +4084,8 @@ const App = {
           <button class="circle-pill ${sub==='feats'?'active':''}" onclick="App.state.compendiumSubtab='feats';App.render();">🌟 Atuty / Feats (${window.DND_FEATS.length})</button>
           <button class="circle-pill ${sub==='items'?'active':''}" onclick="App.state.compendiumSubtab='items';App.render();">💍 Magiczne Przedmioty (${window.DND_MAGIC_ITEMS.length})</button>
           <button class="circle-pill ${sub==='backgrounds'?'active':''}" onclick="App.state.compendiumSubtab='backgrounds';App.render();">📜 Tła (${window.DND_BACKGROUNDS.length})</button>
+          <button class="circle-pill" onclick="App.switchTab('bestiary');">🐉 Bestiariusz AideDD (${(window.DND_MONSTERS||[]).length}) ↗</button>
+          <button class="circle-pill" onclick="App.openSourcesAndLicensesModal();">⚖️ Źródła i Licencje</button>
         </div>
       </div>
 
@@ -3625,17 +4121,9 @@ const App = {
         <h3 style="font-family:var(--font-display);color:var(--gold);margin-bottom:8px;">Tabela Rozwoju Klasy (Poziomy 1–20 wg Wikidot)</h3>
         ${this.renderClassProgressionTable(selCls, 0, false)}
 
-        <h3 style="font-family:var(--font-display);color:var(--gold);margin:20px 0 12px;">Podklasy: ${this.t(selCls.subclass_title_pl, selCls.subclass_title_en)}</h3>
-        <div class="grid-cards">
-          ${selCls.subclasses.map(sc => `
-            <div class="card">
-              <div class="card-header">
-                <div class="card-title">${this.t(sc.name_pl, sc.name_en)}</div>
-                <span class="badge badge-gold">${sc.source}</span>
-              </div>
-              <div style="font-size:0.84rem;">${this.tDesc(sc)}</div>
-            </div>
-          `).join("")}
+        <h3 style="font-family:var(--font-display);color:var(--gold);margin:20px 0 12px;">Podklasy: ${this.t(selCls.subclass_title_pl, selCls.subclass_title_en)} (${selCls.subclasses.length})</h3>
+        <div class="grid-subclasses-detailed">
+          ${selCls.subclasses.map(sc => this.renderDetailedSubclassCard(selCls, sc, false, false)).join("")}
         </div>
       ` : ''}
 
@@ -3669,30 +4157,12 @@ const App = {
               <option value="Ravnica" ${rfCat==='Ravnica'?'selected':''}>Ravnica, Theros &amp; Strixhaven (Loxodon, Leonin, Owlin, Vedalken...)</option>
               <option value="Spelljammer" ${rfCat==='Spelljammer'?'selected':''}>Spelljammer &amp; Dragonlance (Astral Elf, Plasmoid, Thri-kreen, Kender...)</option>
             </select>
+            <button class="btn-secondary btn-sm" onclick="App.state.raceForceXL = !App.state.raceForceXL; App.render();">
+              ${this.state.raceForceXL ? '🔲 Układ 2×2 + Auto XL' : '🔳 Pełna Szerokość (XL)'}
+            </button>
           </div>
-          <div class="grid-cards">
-            ${filteredRaces.map(r => `
-              <div class="card">
-                <div class="card-header">
-                  <div style="display:flex;align-items:center;gap:12px;">
-                    <img src="${this.getRacePortrait(r.id)}" alt="${r.name_pl}" class="portrait-thumb">
-                    <div>
-                      <div class="card-title">${this.t(r.name_pl, r.name_en)}</div>
-                      <span style="font-size:0.75rem;color:var(--text-muted);">${r.source} • <a href="${r.wikidot_url}" target="_blank" style="color:var(--gold);">Wikidot ↗</a></span>
-                    </div>
-                  </div>
-                  <span class="badge badge-gold">${r.speed} ft</span>
-                </div>
-                <div class="badge-row">
-                  <span class="badge badge-arcane">${r.asi_desc_pl}</span>
-                  ${r.darkvision ? `<span class="badge badge-cyan">Darkvision ${r.darkvision} ft</span>` : ''}
-                  <span class="badge">${r.size}</span>
-                </div>
-                <ul style="padding-left:18px;font-size:0.83rem;margin-top:8px;">
-                  ${(this.state.lang === 'en' ? r.traits_en : r.traits_pl).map(t => `<li>${t}</li>`).join("")}
-                </ul>
-              </div>
-            `).join("")}
+          <div class="grid-races-detailed ${this.state.raceForceXL ? 'all-xl' : ''}">
+            ${filteredRaces.map(r => this.renderDetailedRaceCard(r, false, false)).join("")}
           </div>
         `;
       })() : ''}
@@ -3730,7 +4200,10 @@ const App = {
               <div class="card">
                 <div class="card-header">
                   <div class="card-title">${this.t(ft.name_pl, ft.name_en)}</div>
-                  <span class="badge badge-gold">${ft.source}</span>
+                  <div style="display:flex;gap:6px;align-items:center;">
+                    <button class="btn-secondary btn-sm" onclick="App.openFeatDetailModal('${ft.id}')">📖 Podstrona</button>
+                    <span class="badge badge-gold">${ft.source}</span>
+                  </div>
                 </div>
                 <div class="badge-row">
                   ${ft.asi ? `<span class="badge badge-emerald">${ft.asi}</span>` : ''}
@@ -3745,10 +4218,12 @@ const App = {
 
       ${sub === "items" ? (() => {
         const ir = this.state.itemFilterRarity || "all";
+        const ic = this.state.itemFilterCat || "all";
         const is = (this.state.itemFilterSearch || "").toLowerCase();
         const char = this.getActiveChar();
         const filteredItems = window.DND_MAGIC_ITEMS.filter(it => {
           if (ir !== "all" && it.rarity !== ir) return false;
+          if (ic !== "all" && it.category !== ic) return false;
           if (is) {
             const m = (it.name_pl || "").toLowerCase().includes(is) ||
                       (it.name_en || "").toLowerCase().includes(is) ||
@@ -3762,8 +4237,21 @@ const App = {
           <div class="filter-bar">
             <div class="search-input-wrap">
               <span class="search-icon">🔍</span>
-              <input type="text" placeholder="Szukaj magicznego przedmiotu (np. Flame Tongue, Cloak of Protection, Staff of Power, Bag of Holding)..." value="${this.state.itemFilterSearch || ''}" oninput="App.state.itemFilterSearch=this.value;App.render();">
+              <input type="text" placeholder="Szukaj magicznego przedmiotu (np. Flame Tongue, Cloak of Protection, Tatuaż, Vecna, Staff of Power, Bag of Holding)..." value="${this.state.itemFilterSearch || ''}" oninput="App.state.itemFilterSearch=this.value;App.render();">
             </div>
+            <select onchange="App.state.itemFilterCat=this.value;App.render();">
+              <option value="all" ${ic==='all'?'selected':''}>Wszystkie Kategorie (${window.DND_MAGIC_ITEMS.length})</option>
+              <option value="Weapon" ${ic==='Weapon'?'selected':''}>⚔️ Bronie Magiczne (Weapons)</option>
+              <option value="Armor" ${ic==='Armor'?'selected':''}>🛡️ Pancerze i Tarcze (Armor &amp; Shields)</option>
+              <option value="Wondrous Item" ${ic==='Wondrous Item'?'selected':''}>✨ Cudowne Przedmioty, Pasy, Płaszcze i Tatuaże</option>
+              <option value="Spellcasting Focus" ${ic==='Spellcasting Focus'?'selected':''}>🔮 Fokusy Klasowe (+1/+2/+3)</option>
+              <option value="Ring" ${ic==='Ring'?'selected':''}>💍 Pierścienie (Rings)</option>
+              <option value="Rod" ${ic==='Rod'?'selected':''}>👑 Berła (Rods)</option>
+              <option value="Staff" ${ic==='Staff'?'selected':''}>🪄 Kostury (Staves)</option>
+              <option value="Wand" ${ic==='Wand'?'selected':''}>⚡ Różdżki (Wands)</option>
+              <option value="Potion" ${ic==='Potion'?'selected':''}>🧪 Mikstury i Oleje (Potions)</option>
+              <option value="Artifact" ${ic==='Artifact'?'selected':''}>🏆 Artefakty (Artifacts)</option>
+            </select>
             <select onchange="App.state.itemFilterRarity=this.value;App.render();">
               <option value="all" ${ir==='all'?'selected':''}>Wszystkie Rzadkości (${window.DND_MAGIC_ITEMS.length})</option>
               <option value="Common" ${ir==='Common'?'selected':''}>Pospolite (Common)</option>
@@ -3771,16 +4259,21 @@ const App = {
               <option value="Rare" ${ir==='Rare'?'selected':''}>Rzadkie (Rare)</option>
               <option value="Very Rare" ${ir==='Very Rare'?'selected':''}>Bardzo Rzadkie (Very Rare)</option>
               <option value="Legendary" ${ir==='Legendary'?'selected':''}>Legendarne (Legendary)</option>
+              <option value="Artifact" ${ir==='Artifact'?'selected':''}>Artefakty (Artifact)</option>
             </select>
+            <button class="btn-primary btn-sm" onclick="App.openCustomMagicItemModal()">➕ Stwórz Magiczny Przedmiot</button>
           </div>
           <div class="grid-cards">
-            ${filteredItems.map(it => {
+            ${filteredItems.slice(0, (this.state.pageLimits && this.state.pageLimits.items) || 24).map(it => {
               const equipped = char && (char.magicItems || []).includes(it.id);
               return `
                 <div class="card ${equipped ? 'selected' : ''}">
                   <div class="card-header">
                     <div class="card-title">${this.t(it.name_pl, it.name_en)}</div>
-                    <span class="badge badge-gold">${it.rarity}</span>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                      <button class="btn-secondary btn-sm" onclick="App.openMagicItemDetailModal('${it.id}')">📖 Podstrona</button>
+                      <span class="badge badge-gold">${it.rarity}</span>
+                    </div>
                   </div>
                   <div class="badge-row">
                     <span class="badge">${it.category}</span>
@@ -3798,6 +4291,7 @@ const App = {
               `;
             }).join("")}
           </div>
+          ${this.renderPaginationBar('items', filteredItems.length, Math.min(filteredItems.length, (this.state.pageLimits && this.state.pageLimits.items) || 24), 24)}
         `;
       })() : ''}
 
@@ -3807,7 +4301,10 @@ const App = {
             <div class="card">
               <div class="card-header">
                 <div class="card-title">${this.t(b.name_pl, b.name_en)}</div>
-                <span class="badge badge-arcane">${b.skills.join(", ")}</span>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <button class="btn-secondary btn-sm" onclick="App.openBackgroundDetailModal('${b.id}')">📖 Podstrona</button>
+                  <span class="badge badge-arcane">${b.skills.join(", ")}</span>
+                </div>
               </div>
               <p style="font-size:0.83rem;margin-bottom:6px;"><strong>Narzędzia/Języki:</strong> ${b.tools_pl}</p>
               <p style="font-size:0.83rem;margin-bottom:6px;"><strong>Cecha:</strong> ${b.feature_pl}</p>
@@ -3817,6 +4314,1021 @@ const App = {
         </div>
       ` : ''}
     `;
+  },
+
+  // ============================================================================
+  // SZCZEGÓŁOWE KARTY PODKLAS (2x2) ORAZ DEDYKOWANE PODSTRONY (MODALE OPISOWE)
+  // ============================================================================
+  renderDetailedSubclassCard(cls, sc, isSelected = false, selectable = false, fullExpanded = false) {
+    const sMech = this.getSubclassMechanics(sc.id) || {};
+    const feats = sMech.features || [];
+    const primaryFeats = fullExpanded ? feats : feats.slice(0, 2);
+    const extraFeats = fullExpanded ? [] : feats.slice(2);
+    const spellsByLvl = sMech.spells_by_level || null;
+    const bonusSpellsCount = spellsByLvl ? Object.values(spellsByLvl).flat().length : 0;
+    const lore = sMech.lore_pl || this.tDesc(sc);
+
+    return `
+      <div class="card subclass-card-detailed ${isSelected ? 'selected' : ''}" ${selectable ? `onclick="App.setCharSubclass('${sc.id}')" style="cursor:pointer;"` : ''}>
+        <div class="card-header" style="margin-bottom:4px;align-items:flex-start;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <img src="${this.getClassPortrait(cls.id)}" alt="${sc.name_pl}" class="portrait-thumb" style="width:54px;height:54px;">
+            <div>
+              <div class="card-title" style="font-size:1.14rem;">${this.t(sc.name_pl, sc.name_en)}</div>
+              <div style="font-size:0.77rem;color:var(--text-muted);margin-top:2px;">
+                ${cls.icon} <strong>${this.tPlain(cls.name_pl, cls.name_en)}</strong> • 📚 Źródło: <strong>${sc.source}</strong> • Od ${cls.subclass_level}. poziomu
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="btn-secondary btn-sm" onclick="event.stopPropagation(); App.openSubclassDetailModal('${cls.id}', '${sc.id}')" title="Otwórz dedykowaną podstronę tej podklasy">
+              📖 Podstrona
+            </button>
+            ${selectable ? `
+              <span class="badge ${isSelected ? 'badge-emerald' : 'badge-gold'}" style="font-size:0.8rem;padding:5px 10px;">
+                ${isSelected ? '✓ Wybrana' : 'Wybierz'}
+              </span>
+            ` : `<span class="badge badge-gold">${sc.source}</span>`}
+          </div>
+        </div>
+
+        <div class="badge-row" style="margin:2px 0;">
+          <span class="badge badge-gold">⚔️ ${feats.length} zdolności (Poz. ${feats.map(f => f.level).filter((v,i,a)=>a.indexOf(v)===i).join(" / ")})</span>
+          ${sMech.init_ability ? `<span class="badge badge-emerald">⚡ +${sMech.init_ability.toUpperCase()} do Inicjatywy</span>` : ''}
+          ${sMech.init_prof_at_level ? `<span class="badge badge-emerald">⚡ +Biegłość do Inicjatywy</span>` : ''}
+          ${sMech.ac_bonus_passive ? `<span class="badge badge-gold">🛡️ +${sMech.ac_bonus_passive} KP</span>` : ''}
+          ${sMech.toggle_buff ? `<span class="badge badge-crimson">🔥 ${sMech.toggle_buff.name_pl}</span>` : ''}
+          ${bonusSpellsCount ? `<span class="badge badge-arcane">🔮 +${bonusSpellsCount} Zaklęć</span>` : ''}
+        </div>
+
+        <div class="race-lore-box" style="margin:2px 0;">
+          <strong>📜 Charakterystyka:</strong> ${lore}
+        </div>
+
+        ${spellsByLvl ? `
+          <div style="background:var(--bg-deep);border:1px solid var(--border-subtle);border-radius:8px;padding:9px 11px;">
+            <div style="font-size:0.76rem;font-weight:700;color:var(--arcane-bright);margin-bottom:4px;">
+              🔮 Zaklęcia Podklasy (kliknij nazwę, aby otworzyć podstronę zaklęcia):
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;font-size:0.76rem;">
+              ${Object.entries(spellsByLvl).map(([lvl, spIds]) => `
+                <div>
+                  <strong style="color:var(--gold);">Poz. ${lvl}:</strong>
+                  ${spIds.map(sid => {
+                    const spObj = this.getSpellById(sid);
+                    const label = spObj ? this.tPlain(spObj.name_pl, spObj.name_en) : sid;
+                    return spObj
+                      ? `<a href="javascript:void(0)" onclick="event.stopPropagation(); App.openSpellModal('${spObj.id}')" style="color:var(--arcane-bright);text-decoration:underline;margin-right:5px;">${label}</a>`
+                      : `<span style="color:var(--text-main);margin-right:5px;">${label}</span>`;
+                  }).join(" • ")}
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="subclass-feature-timeline">
+          ${primaryFeats.map(f => `
+            <div class="subclass-feature-item">
+              <div class="subclass-feature-head">
+                <strong style="color:var(--gold-bright);font-size:0.89rem;">⚡ Poziom ${f.level}: ${this.t(f.name_pl, f.name_en)}</strong>
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <span class="badge badge-gold" style="font-size:0.68rem;">Poz. ${f.level}</span>
+                  ${f.roll ? `
+                    <button class="btn-primary btn-sm" onclick="event.stopPropagation(); App.rollCustomFormula('${f.roll}', '${(f.roll_label || f.name_pl).replace(/'/g, "\\'")}')" style="padding:2px 8px;font-size:0.72rem;">
+                      🎲 Rzuć ${f.roll.replace(/d/g,'k')}
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+              <div style="font-size:0.81rem;color:var(--text-main);line-height:1.52;">
+                ${this.tDesc(f)}
+              </div>
+            </div>
+          `).join("")}
+
+          ${extraFeats.length > 0 ? `
+            <details class="std-accordion" onclick="event.stopPropagation()">
+              <summary>
+                <span>⚔️ Wyższe poziomy podklasy: Poz. ${extraFeats.map(f => f.level).join(" / ")} (+${extraFeats.length} zdolności)</span>
+              </summary>
+              <div class="std-accordion-body">
+                ${extraFeats.map(f => `
+                  <div class="subclass-feature-item">
+                    <div class="subclass-feature-head">
+                      <strong style="color:var(--gold-bright);font-size:0.88rem;">⚡ Poziom ${f.level}: ${this.t(f.name_pl, f.name_en)}</strong>
+                      <div style="display:flex;gap:6px;align-items:center;">
+                        <span class="badge badge-gold" style="font-size:0.68rem;">Poz. ${f.level}</span>
+                        ${f.roll ? `
+                          <button class="btn-primary btn-sm" onclick="event.stopPropagation(); App.rollCustomFormula('${f.roll}', '${(f.roll_label || f.name_pl).replace(/'/g, "\\'")}')" style="padding:2px 8px;font-size:0.72rem;">
+                            🎲 Rzuć ${f.roll.replace(/d/g,'k')}
+                          </button>
+                        ` : ''}
+                      </div>
+                    </div>
+                    <div style="font-size:0.81rem;color:var(--text-main);line-height:1.5;">
+                      ${this.tDesc(f)}
+                    </div>
+                  </div>
+                `).join("")}
+              </div>
+            </details>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  },
+
+  openRaceDetailModal(raceId) {
+    const r = this.getRaceData(raceId);
+    if (!r) return;
+    const char = this.getActiveChar();
+    const isSelected = char && char.raceId === r.id;
+    this.openModal(
+      `🧝 Podstrona Rasy: ${this.tPlain(r.name_pl, r.name_en)} (${r.source})`,
+      `
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          ${this.renderDetailedRaceCard(r, isSelected, false, true)}
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--border-subtle);padding-top:12px;">
+            <a href="${r.wikidot_url}" target="_blank" style="color:var(--gold);font-weight:600;">🔗 Otwórz oficjalną stronę na dnd5e.wikidot.com ↗</a>
+            <div style="display:flex;gap:8px;">
+              ${char ? `
+                <button class="btn-primary" onclick="App.setCharRace('${r.id}'); App.closeModal(); App.toast('🧝 Wybrano rasę: ${r.name_pl}');">
+                  ${isSelected ? '✓ Aktualnie Wybrana Rasa' : `✨ Wybierz Rasę: ${r.name_pl}`}
+                </button>
+              ` : ''}
+              <button class="btn-ghost" onclick="App.closeModal()">Zamknij</button>
+            </div>
+          </div>
+        </div>
+      `
+    );
+  },
+
+  openClassDetailModal(classId) {
+    const cls = this.getClassData(classId);
+    if (!cls) return;
+    const char = this.getActiveChar();
+    const isSelected = char && char.classId === cls.id;
+    this.openModal(
+      `${cls.icon} Podstrona Klasy: ${this.tPlain(cls.name_pl, cls.name_en)} (Poziomy 1–20)`,
+      `
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <img src="${this.getClassPortrait(cls.id)}" alt="${cls.name_pl}" class="portrait-lg">
+              <div>
+                <h3 style="font-family:var(--font-display);font-size:1.35rem;color:var(--gold);">${cls.icon} ${this.t(cls.name_pl, cls.name_en)}</h3>
+                <div style="font-size:0.82rem;color:var(--text-muted);">
+                  📚 Źródło: <strong>${cls.source}</strong> • Kość Wytrzymałości: <strong>k${cls.hit_die}</strong> • Rzuty Obronne: <strong>${cls.saving_throws.join(", ")}</strong>
+                </div>
+              </div>
+            </div>
+            ${char ? `
+              <button class="btn-primary" onclick="App.setCharClass('${cls.id}'); App.closeModal(); App.toast('⚔️ Wybrano klasę: ${cls.name_pl}');">
+                ${isSelected ? '✓ Aktualna Klasa Bohatera' : `✨ Wybierz Klasę: ${cls.name_pl}`}
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="race-lore-box">
+            ${this.tDesc(cls)}
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;background:var(--bg-deep);padding:12px;border-radius:8px;font-size:0.84rem;">
+            <div><strong>🛡️ Pancerze:</strong> ${this.tPlain(cls.armor_prof_pl, cls.armor_prof_en)}</div>
+            <div><strong>⚔️ Bronie:</strong> ${this.tPlain(cls.weapon_prof_pl, cls.weapon_prof_en)}</div>
+            <div><strong>🎯 Umiejętności (${cls.skills_choose}):</strong> ${cls.skills_list.join(", ")}</div>
+            <div><strong>🔮 Cecha Magii:</strong> ${cls.spellcasting_ability || 'Brak (Klasa Bojowa)'}</div>
+          </div>
+
+          <div>
+            <h4 style="font-family:var(--font-display);color:var(--gold);margin-bottom:8px;">📊 Tabela Rozwoju Klasy (Poziomy 1–20)</h4>
+            ${this.renderClassProgressionTable(cls, char ? char.level : 1, false)}
+          </div>
+
+          <div>
+            <h4 style="font-family:var(--font-display);color:var(--gold);margin-bottom:8px;">⚡ Kluczowe Zdolności Klasowe</h4>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              ${(cls.key_features || []).map(kf => `
+                <div class="subclass-feature-item">
+                  <strong style="color:var(--gold-bright);">Poz. ${kf.level}: ${this.t(kf.name_pl, kf.name_en)}</strong>
+                  <div style="font-size:0.83rem;color:var(--text-main);margin-top:4px;">${this.tDesc(kf)}</div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-family:var(--font-display);color:var(--gold);margin-bottom:8px;">✨ Dostępne Podklasy (${(cls.subclasses || []).length}) — kliknij, aby otworzyć podstronę podklasy:</h4>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              ${(cls.subclasses || []).map(sc => `
+                <button class="btn-secondary btn-sm" onclick="App.openSubclassDetailModal('${cls.id}', '${sc.id}')">
+                  📖 ${this.tPlain(sc.name_pl, sc.name_en)} (${sc.source})
+                </button>
+              `).join("")}
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-subtle);padding-top:12px;">
+            <a href="${cls.wikidot_url}" target="_blank" style="color:var(--gold);font-weight:600;">🔗 Otwórz oficjalną stronę klasy na dnd5e.wikidot.com ↗</a>
+            <button class="btn-ghost" onclick="App.closeModal()">Zamknij</button>
+          </div>
+        </div>
+      `
+    );
+  },
+
+  openSubclassDetailModal(classId, subclassId) {
+    const cls = this.getClassData(classId);
+    const sc = (cls.subclasses || []).find(s => s.id === subclassId);
+    if (!cls || !sc) return;
+    const char = this.getActiveChar();
+    const isSelected = char && char.classId === cls.id && char.subclassId === sc.id;
+    const wikidotSubUrl = `${cls.wikidot_url}:${sc.id}`;
+
+    this.openModal(
+      `✨ Podstrona Podklasy: ${this.tPlain(sc.name_pl, sc.name_en)} (${cls.name_pl})`,
+      `
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          ${this.renderDetailedSubclassCard(cls, sc, isSelected, false, true)}
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--border-subtle);padding-top:12px;">
+            <div style="display:flex;gap:12px;align-items:center;">
+              <a href="${wikidotSubUrl}" target="_blank" style="color:var(--gold);font-weight:600;">🔗 Otwórz podklasę na dnd5e.wikidot.com ↗</a>
+              <button class="btn-ghost btn-sm" onclick="App.openClassDetailModal('${cls.id}')">← Wróć do Klasy ${cls.name_pl}</button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              ${char ? `
+                <button class="btn-primary" onclick="App.setCharClass('${cls.id}'); App.setCharSubclass('${sc.id}'); App.closeModal(); App.toast('✨ Wybrano podklasę: ${sc.name_pl}');">
+                  ${isSelected ? '✓ Aktualnie Wybrana Podklasa' : `✨ Wybierz Podklasę: ${sc.name_pl}`}
+                </button>
+              ` : ''}
+              <button class="btn-ghost" onclick="App.closeModal()">Zamknij</button>
+            </div>
+          </div>
+        </div>
+      `
+    );
+  },
+
+  openBackgroundDetailModal(bgId) {
+    const b = this.getBgData(bgId);
+    if (!b) return;
+    const char = this.getActiveChar();
+    const isSelected = char && char.backgroundId === b.id;
+
+    this.openModal(
+      `📜 Podstrona Tła (Background): ${this.tPlain(b.name_pl, b.name_en)}`,
+      `
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="badge-row">
+            <span class="badge badge-gold">🎯 Biegłości w umiejętnościach: ${b.skills.join(", ")}</span>
+            <span class="badge badge-arcane">🛠️ Narzędzia i Języki: ${b.tools_pl}</span>
+          </div>
+          <div class="race-lore-box">
+            <strong>📖 Opis Pochodzenia:</strong> ${b.desc_pl}
+          </div>
+          <div class="subclass-feature-item">
+            <strong style="color:var(--gold-bright);">🌟 Cecha Tła: ${b.feature_pl}</strong>
+            <div style="font-size:0.86rem;color:var(--text-main);margin-top:6px;">
+              Jako <strong>${this.tPlain(b.name_pl, b.name_en)}</strong> posiadasz specjalną cechę fabularną <em>${b.feature_pl}</em> oraz startowe biegłości w umiejętnościach <strong>${b.skills.join(" i ")}</strong>, które automatycznie zaznaczają się na Twojej Karcie Postaci po wybraniu tego tła.
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-subtle);padding-top:12px;">
+            <a href="http://dnd5e.wikidot.com/background:${b.id}" target="_blank" style="color:var(--gold);font-weight:600;">🔗 Otwórz tło na dnd5e.wikidot.com ↗</a>
+            <div style="display:flex;gap:8px;">
+              ${char ? `
+                <button class="btn-primary" onclick="App.setCharBackground('${b.id}'); App.closeModal(); App.toast('📜 Wybrano tło: ${b.name_pl}');">
+                  ${isSelected ? '✓ Aktualne Tło Bohatera' : `✨ Wybierz Tło: ${b.name_pl}`}
+                </button>
+              ` : ''}
+              <button class="btn-ghost" onclick="App.closeModal()">Zamknij</button>
+            </div>
+          </div>
+        </div>
+      `
+    );
+  },
+
+  openFeatDetailModal(featId) {
+    const ft = window.DND_FEATS.find(f => f.id === featId);
+    if (!ft) return;
+    const char = this.getActiveChar();
+    const hasFeat = char && (char.feats || []).includes(ft.id);
+
+    this.openModal(
+      `🌟 Podstrona Atutu (Feat): ${this.tPlain(ft.name_pl, ft.name_en)} (${ft.source})`,
+      `
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="badge-row">
+            <span class="badge badge-gold">📚 Źródło: ${ft.source}</span>
+            ${ft.asi ? `<span class="badge badge-emerald">⚡ Premia do Cech: ${ft.asi}</span>` : ''}
+            <span class="badge badge-arcane">🔒 Wymagania: ${ft.prereq || 'Brak wymagań wstępnych'}</span>
+          </div>
+          <div class="subclass-feature-item" style="font-size:0.92rem;line-height:1.65;">
+            ${this.tDesc(ft)}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-subtle);padding-top:12px;">
+            <a href="http://dnd5e.wikidot.com/feat:${ft.id}" target="_blank" style="color:var(--gold);font-weight:600;">🔗 Otwórz atut na dnd5e.wikidot.com ↗</a>
+            <div style="display:flex;gap:8px;">
+              ${char ? `
+                <button class="btn-primary" onclick="App.toggleCharFeat('${ft.id}'); App.closeModal();">
+                  ${hasFeat ? '🗑️ Usuń Atut z Postaci' : `➕ Dodaj Atut do Postaci: ${ft.name_pl}`}
+                </button>
+              ` : ''}
+              <button class="btn-ghost" onclick="App.closeModal()">Zamknij</button>
+            </div>
+          </div>
+        </div>
+      `
+    );
+  },
+
+  openMagicItemDetailModal(itemId) {
+    const it = window.DND_MAGIC_ITEMS.find(x => x.id === itemId);
+    if (!it) return;
+    const char = this.getActiveChar();
+    const equipped = char && (char.magicItems || []).includes(it.id);
+
+    this.openModal(
+      `💍 Podstrona Przedmiotu: ${this.tPlain(it.name_pl, it.name_en)} (${it.rarity})`,
+      `
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="badge-row">
+            <span class="badge badge-gold">✨ Rzadkość: ${it.rarity}</span>
+            <span class="badge">${it.category}</span>
+            ${it.attunement ? `<span class="badge badge-arcane">🔗 ${it.attunement_req || 'Wymaga zestrojenia (Attunement)'}</span>` : `<span class="badge badge-cyan">Bez zestrojenia</span>`}
+            ${it.bonus_ac ? `<span class="badge badge-gold">🛡️ +${it.bonus_ac} do KP (Auto)</span>` : ''}
+            ${it.bonus_saves ? `<span class="badge badge-emerald">🛡️ +${it.bonus_saves} do Rzutów Obronnych (Auto)</span>` : ''}
+            ${it.bonus_spell_dc ? `<span class="badge badge-arcane">🔮 +${it.bonus_spell_dc} do ST i Ataku Czarów (Auto)</span>` : ''}
+          </div>
+          <div class="subclass-feature-item" style="font-size:0.92rem;line-height:1.65;">
+            ${this.tDesc(it)}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-subtle);padding-top:12px;">
+            <div>
+              ${it.roll ? `<button class="btn-secondary" onclick="App.rollCustomFormula('${it.roll}', '${it.roll_label || it.name_pl}')">🎲 Rzuć ${it.roll.replace(/d/g,'k')}</button>` : ''}
+            </div>
+            <div style="display:flex;gap:8px;">
+              ${char ? `
+                <button class="btn-primary" onclick="App.toggleCharMagicItem('${it.id}'); App.closeModal();">
+                  ${equipped ? '🗑️ Zdejmij Przedmiot' : `➕ Wyposaż Postać: ${it.name_pl}`}
+                </button>
+              ` : ''}
+              <button class="btn-ghost" onclick="App.closeModal()">Zamknij</button>
+            </div>
+          </div>
+        </div>
+      `
+    );
+  },
+
+  openCustomMagicItemModal() {
+    this.openModal(
+      "💍 Kuźnia Magicznych Przedmiotów i Artefaktów (Custom Magic Item)",
+      `
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:0.76rem;color:var(--text-muted);">Nazwa Przedmiotu (PL)</label>
+              <input type="text" id="cmi-name-pl" placeholder="np. Korona Króla Lisza" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:0.76rem;color:var(--text-muted);">Nazwa Angielska (EN)</label>
+              <input type="text" id="cmi-name-en" placeholder="np. Crown of the Lich King" style="width:100%;">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:0.76rem;color:var(--text-muted);">Kategoria</label>
+              <select id="cmi-cat" style="width:100%;">
+                <option value="Wondrous Item">Cudowny Przedmiot (Wondrous Item)</option>
+                <option value="Weapon">Broń Magiczna (Weapon)</option>
+                <option value="Armor">Pancerz / Tarcza (Armor)</option>
+                <option value="Spellcasting Focus">Fokus Czarowania (Spellcasting Focus)</option>
+                <option value="Ring">Pierścień (Ring)</option>
+                <option value="Rod">Berło (Rod)</option>
+                <option value="Staff">Kostur (Staff)</option>
+                <option value="Wand">Różdżka (Wand)</option>
+                <option value="Potion">Mikstura (Potion)</option>
+                <option value="Artifact">Artefakt (Artifact)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.76rem;color:var(--text-muted);">Rzadkość</label>
+              <select id="cmi-rarity" style="width:100%;">
+                <option value="Common">Pospolity (Common)</option>
+                <option value="Uncommon">Niepospolity (Uncommon)</option>
+                <option value="Rare" selected>Rzadki (Rare)</option>
+                <option value="Very Rare">Bardzo Rzadki (Very Rare)</option>
+                <option value="Legendary">Legendarny (Legendary)</option>
+                <option value="Artifact">Artefakt (Artifact)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.76rem;color:var(--text-muted);">Kości Akcji (opcjonalnie)</label>
+              <input type="text" id="cmi-roll" placeholder="np. 4d8 lub 8d6" style="width:100%;">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+            <div>
+              <label style="font-size:0.74rem;color:var(--text-muted);">Bonus do KP (+AC)</label>
+              <input type="number" id="cmi-ac" value="0" min="0" max="10" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:0.74rem;color:var(--text-muted);">Bonus Rzutów Obr.</label>
+              <input type="number" id="cmi-saves" value="0" min="0" max="10" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:0.74rem;color:var(--text-muted);">Bonus ST Czarów</label>
+              <input type="number" id="cmi-dc" value="0" min="0" max="10" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:0.74rem;color:var(--text-muted);">Bonus Ataku Czarem</label>
+              <input type="number" id="cmi-spatk" value="0" min="0" max="10" style="width:100%;">
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="cmi-attune" checked>
+            <span>Wymaga Zestrojenia (Attunement)</span>
+          </label>
+          <textarea id="cmi-desc" rows="3" placeholder="Pełny opis właściwości magicznego przedmiotu..."></textarea>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button class="btn-ghost" onclick="App.closeModal()">Anuluj</button>
+            <button class="btn-primary" onclick="App.saveCustomMagicItem()">💾 Stwórz i Wyposaż Postać</button>
+          </div>
+        </div>
+      `
+    );
+  },
+
+  saveCustomMagicItem() {
+    const name_pl = document.getElementById("cmi-name-pl").value.trim();
+    if (!name_pl) {
+      this.toast("Podaj nazwę przedmiotu!");
+      return;
+    }
+    const name_en = document.getElementById("cmi-name-en").value.trim() || name_pl;
+    const category = document.getElementById("cmi-cat").value;
+    const rarity = document.getElementById("cmi-rarity").value;
+    const roll = document.getElementById("cmi-roll").value.trim() || null;
+    const bonus_ac = parseInt(document.getElementById("cmi-ac").value, 10) || 0;
+    const bonus_saves = parseInt(document.getElementById("cmi-saves").value, 10) || 0;
+    const bonus_spell_dc = parseInt(document.getElementById("cmi-dc").value, 10) || 0;
+    const bonus_spell_atk = parseInt(document.getElementById("cmi-spatk").value, 10) || 0;
+    const attunement = document.getElementById("cmi-attune").checked;
+    const desc_pl = document.getElementById("cmi-desc").value.trim() || "Własny magiczny przedmiot.";
+
+    const newItem = {
+      id: "custom-item-" + Date.now(),
+      name_pl,
+      name_en,
+      category,
+      rarity,
+      attunement,
+      attunement_req: attunement ? "Wymaga zestrojenia" : null,
+      bonus_ac: bonus_ac || undefined,
+      bonus_saves: bonus_saves || undefined,
+      bonus_spell_dc: bonus_spell_dc || undefined,
+      bonus_spell_atk: bonus_spell_atk || undefined,
+      roll: roll || undefined,
+      roll_label: roll ? `${name_pl} (${roll})` : undefined,
+      desc_pl,
+      desc_en: desc_pl
+    };
+
+    window.DND_MAGIC_ITEMS.unshift(newItem);
+    const char = this.getActiveChar();
+    if (char) {
+      char.magicItems = char.magicItems || [];
+      char.magicItems.push(newItem.id);
+      this.saveState();
+    }
+    this.closeModal();
+    this.render();
+    this.toast(`💍 Dodano i wyposażono przedmiot: ${name_pl}!`);
+  },
+
+  // ============================================================================
+  // TAB 6: BESTIARIUSZ D&D 5E (AIDEDD MONSTERS — https://www.aidedd.org/monster-dnd5/)
+  // ============================================================================
+  renderBestiaryTab() {
+    const monsters = window.DND_MONSTERS || [];
+    const q = (this.state.monsterFilterSearch || "").toLowerCase();
+    const fType = this.state.monsterFilterType || "all";
+    const fCr = this.state.monsterFilterCr || "all";
+    const beastsOnly = Boolean(this.state.monsterBeastsOnly);
+    const enc = this.state.encounterMonsters || [];
+
+    const filtered = monsters.filter(m => {
+      if (beastsOnly && m.type_en !== "Beast") return false;
+      if (fType !== "all" && m.type_en !== fType) return false;
+      if (fCr !== "all") {
+        if (fCr === "low" && m.cr_num > 1) return false;
+        else if (fCr === "mid" && (m.cr_num < 2 || m.cr_num > 5)) return false;
+        else if (fCr === "high" && (m.cr_num < 6 || m.cr_num > 12)) return false;
+        else if (fCr === "epic" && (m.cr_num < 13 || m.cr_num > 19)) return false;
+        else if (fCr === "legend" && m.cr_num < 20) return false;
+        else if (!["low","mid","high","epic","legend"].includes(fCr) && String(m.cr) !== fCr) return false;
+      }
+      if (q) {
+        const match = (m.name_pl || "").toLowerCase().includes(q) ||
+                      (m.name_en || "").toLowerCase().includes(q) ||
+                      (m.type_pl || "").toLowerCase().includes(q) ||
+                      (m.traits || []).map(t => t.name_pl + " " + t.desc_pl).join(" ").toLowerCase().includes(q) ||
+                      (m.actions || []).map(a => a.name_pl + " " + a.desc_pl).join(" ").toLowerCase().includes(q);
+        if (!match) return false;
+      }
+      return true;
+    }).sort((a, b) => a.cr_num - b.cr_num || a.name_pl.localeCompare(b.name_pl));
+
+    return `
+      <div class="section-header">
+        <div>
+          <h1 class="section-title">🐉 Bestiariusz D&amp;D 5e (AideDD Monster Manual)</h1>
+          <p class="section-subtitle">
+            Pełne bloki statystyk potworów z <a href="https://www.aidedd.org/monster-dnd5/" target="_blank" style="color:var(--gold);font-weight:600;">aidedd.org/monster-dnd5 ↗</a> — klikalne rzuty na Cechy, Trafienie, Obrażenia i PW, filtr Dzikiego Kształtu (Wild Shape / Polimorfia) oraz Tracker Starcia.
+          </p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="${beastsOnly ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="App.state.monsterBeastsOnly = !App.state.monsterBeastsOnly; App.render();">
+            🐾 ${beastsOnly ? '✓ Tylko Bestie (Wild Shape / Polimorfia)' : 'Pokaż Bestie (Druid / Polimorfia / Chowańce)'}
+          </button>
+          <button class="btn-secondary btn-sm" onclick="App.state.monsterForceXL = !App.state.monsterForceXL; App.render();">
+            ${this.state.monsterForceXL ? '🔲 Układ 2×2 + Auto XL' : '🔳 Pełna Szerokość (XL)'}
+          </button>
+          <button class="btn-primary btn-sm" onclick="App.openCustomMonsterModal()">➕ Stwórz Potwora</button>
+        </div>
+      </div>
+
+      ${enc.length > 0 ? `
+        <div class="card" style="margin-bottom:18px;background:linear-gradient(135deg, rgba(217,70,79,0.14), rgba(229,193,88,0.1));border-color:var(--gold);">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+            <div>
+              <strong style="font-family:var(--font-display);font-size:1.05rem;color:var(--gold-bright);">⚔️ Aktywne Starcie / Przywołane Istoty (${enc.length})</strong>
+              <span style="font-size:0.78rem;color:var(--text-muted);margin-left:8px;">Śledź na żywo PW potworów, wierzchowców, chowańców lub form Dzikiego Kształtu Druida</span>
+            </div>
+            <button class="btn-ghost btn-sm" onclick="App.state.encounterMonsters=[];App.render();">🗑️ Wyczyść starcie</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;">
+            ${enc.map((em, idx) => `
+              <div style="background:var(--bg-deep);border:1px solid ${em.hpCurrent <= 0 ? 'var(--crimson)' : 'var(--border-gold)'};border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                  <div style="cursor:pointer;" onclick="App.openMonsterDetailModal('${em.id}')">
+                    <strong style="color:var(--gold-bright);">${em.icon || '🐉'} ${em.label}</strong>
+                    <span class="badge badge-gold" style="margin-left:4px;">🛡️ KP ${em.ac}</span>
+                  </div>
+                  <button class="btn-ghost btn-sm" onclick="App.removeEncounterMonster(${idx})">✕</button>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                  <span style="font-family:var(--font-mono);font-weight:800;font-size:1.05rem;color:${em.hpCurrent <= 0 ? 'var(--crimson)' : 'var(--emerald)'};">
+                    ${em.hpCurrent <= 0 ? '💀 0' : `❤️ ${em.hpCurrent}`} / ${em.hpMax} PW
+                  </span>
+                  <div style="display:flex;gap:4px;">
+                    <button class="btn-danger btn-sm" onclick="App.modifyEncounterHP(${idx}, -5)">-5</button>
+                    <button class="btn-danger btn-sm" onclick="App.modifyEncounterHP(${idx}, -1)">-1</button>
+                    <button class="btn-secondary btn-sm" onclick="App.modifyEncounterHP(${idx}, 1)">+1</button>
+                    <button class="btn-primary btn-sm" onclick="App.modifyEncounterHP(${idx}, 5)">+5</button>
+                  </div>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="filter-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" placeholder="Szukaj potwora po nazwie PL/EN, zdolności lub ataku (np. Smok, Dragon, Licz, Beholder, Wilk, T-Rex, Goblin, Wampir)..." value="${this.state.monsterFilterSearch || ''}" oninput="App.state.monsterFilterSearch=this.value;App.render();">
+        </div>
+        <select onchange="App.state.monsterFilterType=this.value;App.render();">
+          <option value="all" ${fType==='all'?'selected':''}>Wszystkie Typy Potworów (${monsters.length})</option>
+          <option value="Beast" ${fType==='Beast'?'selected':''}>🐾 Bestie (Beast — Druid / Chowańce / Polimorfia)</option>
+          <option value="Dragon" ${fType==='Dragon'?'selected':''}>🐉 Smoki (Dragon)</option>
+          <option value="Undead" ${fType==='Undead'?'selected':''}>💀 Nieumarli (Undead)</option>
+          <option value="Fiend" ${fType==='Fiend'?'selected':''}>😈 Czarty — Demony i Diabły (Fiend)</option>
+          <option value="Aberration" ${fType==='Aberration'?'selected':''}>👁️ Aberracje (Aberration)</option>
+          <option value="Humanoid" ${fType==='Humanoid'?'selected':''}>⚔️ Humanoidy i NPC (Humanoid)</option>
+          <option value="Monstrosity" ${fType==='Monstrosity'?'selected':''}>🦂 Monstrualności (Monstrosity)</option>
+          <option value="Giant" ${fType==='Giant'?'selected':''}>🗿 Giganty (Giant)</option>
+          <option value="Elemental" ${fType==='Elemental'?'selected':''}>🌪️ Żywiołaki (Elemental)</option>
+          <option value="Construct" ${fType==='Construct'?'selected':''}>⚙️ Konstrukty i Golemy (Construct)</option>
+          <option value="Fey" ${fType==='Fey'?'selected':''}>🧚 Fey (Wróżki i Wiedźmy)</option>
+          <option value="Celestial" ${fType==='Celestial'?'selected':''}>🪽 Niebianie (Celestial)</option>
+          <option value="Ooze" ${fType==='Ooze'?'selected':''}>🟢 Szlamy (Ooze)</option>
+          <option value="Plant" ${fType==='Plant'?'selected':''}>🌿 Rośliny (Plant)</option>
+        </select>
+        <select onchange="App.state.monsterFilterCr=this.value;App.render();">
+          <option value="all" ${fCr==='all'?'selected':''}>Wszystkie SW / CR (0 – 30)</option>
+          <option value="low" ${fCr==='low'?'selected':''}>SW 0 – 1 (Niskopoziomowe / Wild Shape)</option>
+          <option value="mid" ${fCr==='mid'?'selected':''}>SW 2 – 5 (Średnie zagrożenie)</option>
+          <option value="high" ${fCr==='high'?'selected':''}>SW 6 – 12 (Wysokie zagrożenie)</option>
+          <option value="epic" ${fCr==='epic'?'selected':''}>SW 13 – 19 (Bossowie i Dorosłe Smoki)</option>
+          <option value="legend" ${fCr==='legend'?'selected':''}>SW 20 – 30 (Starożytne Smoki, Licz, Tarrasque)</option>
+        </select>
+      </div>
+
+      <div class="grid-races-detailed ${this.state.monsterForceXL ? 'all-xl' : ''}">
+        ${filtered.slice(0, (this.state.pageLimits && this.state.pageLimits.monsters) || 24).map(m => this.renderDetailedMonsterCard(m, false)).join("")}
+      </div>
+      ${this.renderPaginationBar('monsters', filtered.length, Math.min(filtered.length, (this.state.pageLimits && this.state.pageLimits.monsters) || 24), 24)}
+    `;
+  },
+
+  renderDetailedMonsterCard(m, isModal = false) {
+    const isXL = Boolean(isModal || this.state.monsterForceXL);
+    const portraitUri = window.getMonsterPortraitUri ? window.getMonsterPortraitUri(m) : "";
+    const aideddUrl = `https://www.aidedd.org/dnd/monstres.php?vo=${m.id}`;
+    const allActions = m.actions || [];
+    const primaryActions = isXL ? allActions : allActions.slice(0, 2);
+    const extraActions = isXL ? [] : allActions.slice(2);
+    const hasLeg = Boolean(m.legendary_actions && m.legendary_actions.length > 0);
+
+    return `
+      <div class="card race-card-2x2 ${isXL ? 'race-card-xl' : ''}">
+        <div class="card-header" style="margin-bottom:4px;align-items:center;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <img src="${portraitUri}" alt="${m.name_pl}" class="portrait-lg" style="width:72px;height:72px;">
+            <div>
+              <div class="card-title" style="font-size:1.22rem;">${this.t(m.name_pl, m.name_en)}</div>
+              <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px;">
+                ${m.size} • <strong>${this.tPlain(m.type_pl, m.type_en)}</strong> • ${m.alignment_pl} •
+                <a href="${aideddUrl}" target="_blank" style="color:var(--gold);font-weight:600;">AideDD Statblock ↗</a>
+              </div>
+              <div class="badge-row" style="margin:6px 0 0;">
+                <span class="badge badge-crimson" style="font-size:0.78rem;">💀 SW (CR): ${m.cr} (${m.xp.toLocaleString()} PD)</span>
+                <span class="badge badge-gold" style="font-size:0.78rem;">🛡️ KP: ${m.ac} ${m.ac_desc ? `(${m.ac_desc})` : ''}</span>
+                <span class="badge badge-emerald" style="font-size:0.78rem;cursor:pointer;" onclick="App.rollCustomFormula('${m.hp_formula}', 'Losowanie PW: ${m.name_pl.replace(/'/g, "\\'")}')" title="Kliknij, aby wylosować PW potwora z kości">
+                  ❤️ PW: ${m.hp} (${m.hp_formula.replace(/d/g,'k')}) 🎲
+                </span>
+                <span class="badge badge-cyan" style="font-size:0.78rem;">🏃 ${m.speed}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            ${!isModal ? `
+              <button class="btn-secondary btn-sm" onclick="App.openMonsterDetailModal('${m.id}')">
+                📖 Podstrona
+              </button>
+            ` : ''}
+            <button class="btn-primary btn-sm" onclick="App.addMonsterToEncounter('${m.id}')" title="Dodaj tego potwora do aktywnego starcia, aby śledzić jego PW">
+              ⚔️ Do Starcia
+            </button>
+          </div>
+        </div>
+
+        <!-- 6 Clickable Ability Scores -->
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;background:var(--bg-deep);padding:10px;border-radius:10px;border:1px solid var(--border-subtle);text-align:center;">
+          ${window.DND_ABILITIES.map(ab => {
+            const sc = (m.abilities && m.abilities[ab.id]) || 10;
+            const mod = this.getMod(sc);
+            return `
+              <div onclick="App.rollDie(20, ${mod}, '${m.name_pl.replace(/'/g, "\\'")}: Test ${ab.short_pl}')" style="cursor:pointer;padding:4px;border-radius:6px;background:var(--bg-card);border:1px solid rgba(255,255,255,0.05);" title="Kliknij, aby wykonać rzut k20 na ${ab.name_pl} tego potwora">
+                <div style="font-size:0.66rem;font-weight:700;color:var(--gold);">${ab.short_pl}</div>
+                <div style="font-size:0.9rem;font-weight:800;color:var(--text-main);">${sc} <span style="color:var(--gold-bright);">(${this.fmtMod(mod)})</span></div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+
+        <!-- Saves, Skills, Resistances, Senses -->
+        <div style="background:var(--bg-deep);padding:10px 12px;border-radius:8px;font-size:0.8rem;display:flex;flex-direction:column;gap:3px;border-left:3px solid var(--gold);">
+          ${m.saves_pl ? `<div><strong>🛡️ Rzuty obronne:</strong> ${m.saves_pl}</div>` : ''}
+          ${m.skills_pl ? `<div><strong>🎯 Umiejętności:</strong> ${m.skills_pl}</div>` : ''}
+          ${m.resistances_pl ? `<div><strong>🛡️ Odporności:</strong> ${m.resistances_pl}</div>` : ''}
+          ${m.immunities_pl ? `<div><strong>🔒 Niepodatności / Podatności:</strong> ${m.immunities_pl}</div>` : ''}
+          <div><strong>👁️ Zmysły:</strong> ${m.senses_pl} • <strong>🗣️ Języki:</strong> ${m.languages_pl}</div>
+        </div>
+
+        ${m.traits && m.traits.length > 0 ? `
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${m.traits.map(tr => `
+              <div class="race-trait-box" style="padding:8px 12px;">
+                <strong style="color:var(--gold-bright);font-size:0.86rem;">✨ ${tr.name_pl}</strong>
+                <div style="font-size:0.81rem;color:var(--text-main);">${tr.desc_pl}</div>
+              </div>
+            `).join("")}
+          </div>
+        ` : ''}
+
+        <!-- Actions with Clickable Attack & Damage Rolls -->
+        <div>
+          <div style="font-family:var(--font-display);font-size:0.88rem;font-weight:700;color:var(--gold);border-bottom:1px solid var(--border-gold);padding-bottom:4px;margin-bottom:8px;">
+            ⚔️ Akcje Bojowe (${allActions.length}) — kliknij, aby rzucić na trafienie lub obrażenia:
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            ${primaryActions.map(act => `
+              <div class="subclass-feature-item">
+                <div class="subclass-feature-head">
+                  <strong style="color:var(--gold-bright);font-size:0.89rem;">⚔️ ${act.name_pl}</strong>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    ${act.atk_bonus !== undefined ? `
+                      <button class="btn-primary btn-sm" onclick="App.rollDie(20, ${act.atk_bonus}, '${m.name_pl.replace(/'/g, "\\'")}: Atak — ${act.name_pl.replace(/'/g, "\\'")}')" style="padding:2px 8px;font-size:0.73rem;">
+                        🎯 Trafienie ${this.fmtMod(act.atk_bonus)}
+                      </button>
+                    ` : ''}
+                    ${act.dmg_dice ? `
+                      <button class="btn-secondary btn-sm" onclick="App.rollCustomFormula('${act.dmg_dice}', '${m.name_pl.replace(/'/g, "\\'")}: Obrażenia — ${act.name_pl.replace(/'/g, "\\'")}')" style="padding:2px 8px;font-size:0.73rem;">
+                        🎲 ${act.dmg_dice.replace(/d/g,'k')} ${act.dmg_type_pl || ''}
+                      </button>
+                    ` : ''}
+                  </div>
+                </div>
+                <div style="font-size:0.81rem;color:var(--text-main);line-height:1.5;">${act.desc_pl}</div>
+              </div>
+            `).join("")}
+
+            ${(!isXL && (extraActions.length > 0 || hasLeg)) ? `
+              <details class="std-accordion">
+                <summary>
+                  <span>⚔️ Więcej akcji (${extraActions.length})${hasLeg ? ' + 👑 Akcje Legendarne' : ''}</span>
+                </summary>
+                <div class="std-accordion-body">
+                  ${extraActions.map(act => `
+                    <div class="subclass-feature-item">
+                      <div class="subclass-feature-head">
+                        <strong style="color:var(--gold-bright);font-size:0.88rem;">⚔️ ${act.name_pl}</strong>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                          ${act.atk_bonus !== undefined ? `
+                            <button class="btn-primary btn-sm" onclick="App.rollDie(20, ${act.atk_bonus}, '${m.name_pl.replace(/'/g, "\\'")}: Atak — ${act.name_pl.replace(/'/g, "\\'")}')" style="padding:2px 8px;font-size:0.73rem;">
+                              🎯 Trafienie ${this.fmtMod(act.atk_bonus)}
+                            </button>
+                          ` : ''}
+                          ${act.dmg_dice ? `
+                            <button class="btn-secondary btn-sm" onclick="App.rollCustomFormula('${act.dmg_dice}', '${m.name_pl.replace(/'/g, "\\'")}: Obrażenia — ${act.name_pl.replace(/'/g, "\\'")}')" style="padding:2px 8px;font-size:0.73rem;">
+                              🎲 ${act.dmg_dice.replace(/d/g,'k')} ${act.dmg_type_pl || ''}
+                            </button>
+                          ` : ''}
+                        </div>
+                      </div>
+                      <div style="font-size:0.8rem;color:var(--text-main);line-height:1.5;">${act.desc_pl}</div>
+                    </div>
+                  `).join("")}
+                  ${hasLeg ? m.legendary_actions.map(la => `
+                    <div style="background:rgba(217,70,79,0.1);border:1px solid rgba(217,70,79,0.35);border-radius:8px;padding:8px 12px;font-size:0.8rem;">
+                      <strong style="color:#fca5a5;">👑 ${la.name_pl}:</strong> ${la.desc_pl}
+                    </div>
+                  `).join("") : ''}
+                </div>
+              </details>
+            ` : ''}
+          </div>
+        </div>
+
+        ${(isXL && hasLeg) ? `
+          <div>
+            <div style="font-family:var(--font-display);font-size:0.88rem;font-weight:700;color:var(--crimson);border-bottom:1px solid var(--crimson);padding-bottom:4px;margin-bottom:6px;">
+              👑 Akcje Legendarne:
+            </div>
+            ${m.legendary_actions.map(la => `
+              <div style="background:rgba(217,70,79,0.1);border:1px solid rgba(217,70,79,0.35);border-radius:8px;padding:8px 12px;font-size:0.8rem;">
+                <strong style="color:#fca5a5;">${la.name_pl}:</strong> ${la.desc_pl}
+              </div>
+            `).join("")}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  },
+
+  openMonsterDetailModal(monsterId) {
+    const m = (window.DND_MONSTERS || []).find(x => x.id === monsterId);
+    if (!m) return;
+    const aideddUrl = `https://www.aidedd.org/dnd/monstres.php?vo=${m.id}`;
+    this.openModal(
+      `🐉 Karta Potwora: ${this.tPlain(m.name_pl, m.name_en)} (SW ${m.cr})`,
+      `
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          ${this.renderDetailedMonsterCard(m, true)}
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-subtle);padding-top:12px;">
+            <a href="${aideddUrl}" target="_blank" style="color:var(--gold);font-weight:600;">🔗 Otwórz oficjalny statblock na aidedd.org ↗</a>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-primary" onclick="App.addMonsterToEncounter('${m.id}'); App.closeModal();">⚔️ Dodaj do Aktywnego Starcia</button>
+              <button class="btn-ghost" onclick="App.closeModal()">Zamknij</button>
+            </div>
+          </div>
+        </div>
+      `
+    );
+  },
+
+  addMonsterToEncounter(monsterId) {
+    const m = (window.DND_MONSTERS || []).find(x => x.id === monsterId);
+    if (!m) return;
+    this.state.encounterMonsters = this.state.encounterMonsters || [];
+    const count = this.state.encounterMonsters.filter(x => x.id === m.id).length + 1;
+    this.state.encounterMonsters.push({
+      id: m.id,
+      icon: m.icon,
+      label: count > 1 ? `${m.name_pl} #${count}` : m.name_pl,
+      ac: m.ac,
+      hpMax: m.hp,
+      hpCurrent: m.hp
+    });
+    this.render();
+    this.toast(`⚔️ Dodano do starcia: ${m.name_pl} (${m.hp} PW, KP ${m.ac})`);
+  },
+
+  modifyEncounterHP(idx, delta) {
+    const list = this.state.encounterMonsters || [];
+    if (!list[idx]) return;
+    list[idx].hpCurrent = Math.min(list[idx].hpMax, Math.max(0, list[idx].hpCurrent + delta));
+    this.render();
+  },
+
+  removeEncounterMonster(idx) {
+    this.state.encounterMonsters = (this.state.encounterMonsters || []).filter((_, i) => i !== idx);
+    this.render();
+  },
+
+  openCustomMonsterModal() {
+    this.openModal(
+      "🐉 Kreator Potwora / NPC (Custom Monster Statblock)",
+      `
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:0.75rem;color:var(--text-muted);">Nazwa Potwora (PL)</label>
+              <input type="text" id="cm-name-pl" placeholder="np. Cienisty Smok" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:0.75rem;color:var(--text-muted);">Typ Istoty</label>
+              <select id="cm-type" style="width:100%;">
+                <option value="Monstrosity">Monstrualność (Monstrosity)</option>
+                <option value="Beast">Bestia (Beast)</option>
+                <option value="Dragon">Smok (Dragon)</option>
+                <option value="Undead">Nieumarły (Undead)</option>
+                <option value="Fiend">Czart (Fiend)</option>
+                <option value="Aberration">Aberracja (Aberration)</option>
+                <option value="Humanoid">Humanoid</option>
+                <option value="Giant">Gigant (Giant)</option>
+                <option value="Elemental">Żywiołak (Elemental)</option>
+                <option value="Construct">Konstrukt (Construct)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem;color:var(--text-muted);">Stopień Wyzwania (SW / CR)</label>
+              <input type="number" id="cm-cr" value="5" min="0" max="30" style="width:100%;">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:0.75rem;color:var(--text-muted);">Klasa Pancerza (KP)</label>
+              <input type="number" id="cm-ac" value="16" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:0.75rem;color:var(--text-muted);">Punkty Wytrzymałości (PW)</label>
+              <input type="number" id="cm-hp" value="95" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:0.75rem;color:var(--text-muted);">Formuła Kości PW</label>
+              <input type="text" id="cm-hp-dice" value="10d10+40" style="width:100%;">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:0.75rem;color:var(--text-muted);">Nazwa Głównego Ataku</label>
+              <input type="text" id="cm-atk-name" value="Ugryzienie Cienia" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:0.75rem;color:var(--text-muted);">Bonus do Trafienia (+X)</label>
+              <input type="number" id="cm-atk-bonus" value="8" style="width:100%;">
+            </div>
+            <div>
+              <label style="font-size:0.75rem;color:var(--text-muted);">Kości Obrażeń Ataku</label>
+              <input type="text" id="cm-atk-dice" value="3d8+5" style="width:100%;">
+            </div>
+          </div>
+          <textarea id="cm-desc" rows="3" placeholder="Opis zdolności i ataku potwora..."></textarea>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button class="btn-ghost" onclick="App.closeModal()">Anuluj</button>
+            <button class="btn-primary" onclick="App.saveCustomMonster()">💾 Stwórz Potwora w Bestiariuszu</button>
+          </div>
+        </div>
+      `
+    );
+  },
+
+  saveCustomMonster() {
+    const name_pl = document.getElementById("cm-name-pl").value.trim();
+    if (!name_pl) {
+      this.toast("Podaj nazwę potwora!");
+      return;
+    }
+    const type_en = document.getElementById("cm-type").value;
+    const cr_num = parseFloat(document.getElementById("cm-cr").value) || 1;
+    const ac = parseInt(document.getElementById("cm-ac").value, 10) || 14;
+    const hp = parseInt(document.getElementById("cm-hp").value, 10) || 45;
+    const hp_formula = document.getElementById("cm-hp-dice").value.trim() || "6d8+18";
+    const atkName = document.getElementById("cm-atk-name").value.trim() || "Atak";
+    const atkBonus = parseInt(document.getElementById("cm-atk-bonus").value, 10) || 5;
+    const atkDice = document.getElementById("cm-atk-dice").value.trim() || "2d6+3";
+    const desc = document.getElementById("cm-desc").value.trim() || "Atak wręcz lub zdolność specjalna.";
+
+    const newM = {
+      id: "custom-monster-" + Date.now(),
+      name_pl,
+      name_en: name_pl,
+      icon: "🐉",
+      type_pl: type_en,
+      type_en,
+      size: "Large (Duży)",
+      alignment_pl: "Neutralny",
+      cr: String(cr_num),
+      cr_num,
+      xp: Math.round(cr_num * 500),
+      ac,
+      ac_desc: "naturalny pancerz",
+      hp,
+      hp_formula,
+      speed: "30 ft",
+      abilities: { STR: 18, DEX: 14, CON: 18, INT: 10, WIS: 12, CHA: 12 },
+      senses_pl: "Widzenie w ciemności 60 ft, Pasywna Percepcja 11",
+      languages_pl: "Wspólny",
+      traits: [],
+      actions: [
+        { name_pl: atkName, atk_bonus: atkBonus, dmg_dice: atkDice, dmg_type_pl: "obrażeń", desc_pl: desc }
+      ]
+    };
+
+    window.DND_MONSTERS.unshift(newM);
+    this.closeModal();
+    this.render();
+    this.toast(`🐉 Dodano potwora do Bestiariusza: ${name_pl}!`);
+  },
+
+  openSourcesAndLicensesModal() {
+    this.openModal(
+      "⚖️ Źródła Danych, Podręczniki i Licencje (SRD 5.1 / CC-BY-4.0 / OGL 1.0a)",
+      `
+        <div style="display:flex;flex-direction:column;gap:14px;font-size:0.86rem;">
+          <div class="race-lore-box">
+            <strong>📜 1. Licencja System Reference Document 5.1 (Creative Commons CC-BY-4.0)</strong><br>
+            Niniejsza aplikacja wykorzystuje materiały z dokumentu <em>System Reference Document 5.1 (SRD 5.1)</em> autorstwa <strong>Wizards of the Coast LLC</strong>, udostępnionego na międzynarodowej licencji <a href="https://creativecommons.org/licenses/by/4.0/legalcode" target="_blank" style="color:var(--gold);">Creative Commons Attribution 4.0 International (CC-BY-4.0) ↗</a>.<br>
+            Oficjalny dokument SRD 5.1: <a href="https://dnd.wizards.com/resources/systems-reference-document" target="_blank" style="color:var(--gold);">dnd.wizards.com/resources/systems-reference-document ↗</a>
+          </div>
+
+          <div class="subclass-feature-item">
+            <strong style="color:var(--gold-bright);">🛡️ 2. Polityka Treści Fanowskich (Wizards of the Coast Fan Content Policy) &amp; OGL v1.0a</strong>
+            <div style="margin-top:4px;color:var(--text-main);">
+              <strong>Kroniki D&amp;D 5e</strong> są darmowym, niekomercyjnym narzędziem fanowskim stworzonym zgodnie z <a href="https://company.wizards.com/pl/legal/fancontentpolicy" target="_blank" style="color:var(--gold);">Polityką Treści Fanowskich Wizards of the Coast ↗</a> oraz <strong>Open Game License v1.0a</strong> (© 2000 Wizards of the Coast, Inc.). Część wykorzystanych materiałów stanowi własność intelektualną Wizards of the Coast LLC. Aplikacja nie jest zatwierdzona ani sponsorowana przez Wizards of the Coast.
+            </div>
+          </div>
+
+          <div class="subclass-feature-item">
+            <strong style="color:var(--gold-bright);">🌐 3. Internetowe Bazy i Kompendia Referencyjne</strong>
+            <ul style="padding-left:18px;margin-top:6px;display:flex;flex-direction:column;gap:4px;">
+              <li><strong>D&amp;D 5e Wikidot Compendium:</strong> <a href="http://dnd5e.wikidot.com/" target="_blank" style="color:var(--gold);">http://dnd5e.wikidot.com/ ↗</a> — struktura tabel klas 1–20, podklas, rodowodów, teł, atutów, zaklęć kręgów 0–9 i magicznych przedmiotów.</li>
+              <li><strong>AideDD Monster D&amp;D 5e:</strong> <a href="https://www.aidedd.org/monster-dnd5/" target="_blank" style="color:var(--gold);">https://www.aidedd.org/monster-dnd5/ ↗</a> — katalog potworów i bloków statystyk w zakładce Bestiariusz.</li>
+            </ul>
+          </div>
+
+          <div>
+            <strong style="color:var(--gold);display:block;margin-bottom:6px;">📚 4. Wykaz Skrótów Podręczników Źródłowych D&amp;D 5e:</strong>
+            <div class="wikidot-table-wrap" style="margin:0;">
+              <table class="wikidot-table">
+                <thead>
+                  <tr>
+                    <th>Skrót</th>
+                    <th>Pełny Tytuł Podręcznika (EN / PL)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><strong>PHB</strong></td><td>Player's Handbook (Podręcznik Gracza D&amp;D 5e)</td></tr>
+                  <tr><td><strong>DMG</strong></td><td>Dungeon Master's Guide (Przewodnik Mistrza Podziemi)</td></tr>
+                  <tr><td><strong>MM</strong></td><td>Monster Manual (Księga Potworów)</td></tr>
+                  <tr><td><strong>XGE</strong></td><td>Xanathar's Guide to Everything (Przewodnik Xanathara)</td></tr>
+                  <tr><td><strong>TCE</strong></td><td>Tasha's Cauldron of Everything (Kocioł Wszystkiego Tashy)</td></tr>
+                  <tr><td><strong>FTD</strong></td><td>Fizban's Treasury of Dragons (Skarbiec Smoków Fizbana)</td></tr>
+                  <tr><td><strong>MPMM</strong></td><td>Mordenkainen Presents: Monsters of the Multiverse (Potwory Wieloświata)</td></tr>
+                  <tr><td><strong>VGM / MToF</strong></td><td>Volo's Guide to Monsters / Mordenkainen's Tome of Foes</td></tr>
+                  <tr><td><strong>VRGR</strong></td><td>Van Richten's Guide to Ravenloft (Przewodnik Van Richtena po Ravenlofcie)</td></tr>
+                  <tr><td><strong>ERLW</strong></td><td>Eberron: Rising from the Last War</td></tr>
+                  <tr><td><strong>EGW</strong></td><td>Explorer's Guide to Wildemount (Przewodnik Odkrywcy po Wildemount)</td></tr>
+                  <tr><td><strong>SCAG</strong></td><td>Sword Coast Adventurer's Guide (Przewodnik po Wybrzeżu Mieczy)</td></tr>
+                  <tr><td><strong>GGtR / MOT / SCC</strong></td><td>Guildmasters' Guide to Ravnica / Mythic Odysseys of Theros / Strixhaven</td></tr>
+                  <tr><td><strong>AAG / DSotDQ</strong></td><td>Astral Adventurer's Guide (Spelljammer) / Dragonlance: Shadow of the Dragon Queen</td></tr>
+                  <tr><td><strong>BGG / BMT</strong></td><td>Bigby Presents: Glory of the Giants / The Book of Many Things</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="subclass-feature-item">
+            <strong style="color:var(--gold-bright);">💻 5. Licencja Kodu Aplikacji i Grafik SVG (MIT License)</strong>
+            <div style="margin-top:4px;color:var(--text-muted);">
+              Kod źródłowy aplikacji <em>Kroniki D&amp;D 5e</em> oraz proceduralne generatory portretów SVG ras, klas i potworów (<code>js/data-portraits.js</code>, <code>js/data-monsters.js</code>) udostępniane są na otwartej licencji <strong>MIT License</strong> (szczegóły w pliku <code>LICENSE.md</code> w repozytorium projektu).
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;">
+            <button class="btn-primary" onclick="App.closeModal()">Zamknij</button>
+          </div>
+        </div>
+      `
+    );
   },
 
   // ---------------- EXPORT / IMPORT & WIKIDOT SYNC MODAL ----------------
