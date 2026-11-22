@@ -1,0 +1,11 @@
+# robots.txt — Kroniki D&D 5e (https://mackos1112.github.io/KartaPostaciDND/)
+# Zezwolenie dla wszystkich robotów indeksujących, wyszukiwarek i crawlerów AI
+
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /css/
+Allow: /js/
+Allow: /manifest.json
+
+Sitemap: https://mackos1112.github.io/KartaPostaciDND/sitemap.xml
