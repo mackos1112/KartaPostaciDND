@@ -189,9 +189,21 @@ window.DND_TEST_SUITE = {
       }
 
       // ----------------------------------------------------------------------
-      // 6. TESTY MAGICZNYCH PRZEDMIOTÓW (255 PRZEDMIOTÓW I ARTEFAKTÓW)
+      // 6. TESTY MAGICZNYCH PRZEDMIOTÓW (500+ PRZEDMIOTÓW I ARTEFAKTÓW Z AIDEDD / WIKIDOT)
       // ----------------------------------------------------------------------
-      assert("6. Magiczne Przedmioty (255)", "Obecność pełnej bazy 255 przedmiotów magicznych i artefaktów z DMG/TCE/XGE/FTD/EGW", (window.DND_MAGIC_ITEMS || []).length >= 250, `Przedmiotów: ${window.DND_MAGIC_ITEMS.length}`);
+      assert("6. Magiczne Przedmioty (500+)", "Obecność pełnej bazy wszystkich 474+ przedmiotów magicznych i artefaktów z aidedd.org/magic-item-dnd5 (DMG/TCE/XGE/FTD/BGG/BMT)", (window.DND_MAGIC_ITEMS || []).length >= 474, `Przedmiotów w bazie: ${window.DND_MAGIC_ITEMS.length}`);
+      const hasAideddItems = Boolean(
+        App.getMagicItemById("absorbing-tattoo") &&
+        App.getMagicItemById("adze-of-annam") &&
+        App.getMagicItemById("alchemical-compendium") &&
+        App.getMagicItemById("all-purpose-tool") &&
+        App.getMagicItemById("antimagic-armor") &&
+        App.getMagicItemById("arcane-grimoire")
+      );
+      assert("6. Magiczne Przedmioty (500+)", "Baza zawiera przedmioty ze wszystkich źródeł AideDD (DMG, XGE, TCE, FTD, Glory of the Giants, Book of Many Things)",
+        hasAideddItems,
+        "DMG + XGE + TCE + FTD + BGG + BMT OK"
+      );
 
       testChar.abilities = { STR: 8, DEX: 14, CON: 10, INT: 10, WIS: 12, CHA: 10 };
       testChar.magicItems = ["belt-of-fire-giant-strength", "amulet-of-health", "headband-of-intellect"];
@@ -322,15 +334,15 @@ window.DND_TEST_SUITE = {
       );
 
       // ----------------------------------------------------------------------
-      // 11. TESTY BESTIARIUSZA AIDEDD (WSZYSTKIE 428 POTWORÓW) ORAZ LICENCJI
+      // 11. TESTY BESTIARIUSZA AIDEDD (WSZYSTKIE 964 POTWORY) ORAZ LICENCJI
       // ----------------------------------------------------------------------
       const monsters = window.DND_MONSTERS || [];
-      assert("11. Bestiariusz AideDD (428+) i Licencje", "Załadowano pełny Bestiariusz wszystkich 428+ potworów D&D 5e z aidedd.org/monster-dnd5 (od CR 0 do CR 30)", monsters.length >= 428, `Potworów w bazie: ${monsters.length}`);
-      const hasBeasts = monsters.filter(m => m.type_en === "Beast").length >= 80;
-      const hasDragons = monsters.filter(m => m.type_en === "Dragon").length >= 40;
-      const hasUndead = monsters.filter(m => m.type_en === "Undead").length >= 30;
+      assert("11. Bestiariusz AideDD (964+) i Licencje", "Załadowano pełny Bestiariusz wszystkich 964+ potworów D&D 5e z aidedd.org/monster-dnd5 ze wszystkich 7 źródeł (MM, MPMM, FTD, BGG, Rules, Adv, Extra)", monsters.length >= 964, `Potworów w bazie: ${monsters.length}`);
+      const hasBeasts = monsters.filter(m => m.type_en === "Beast").length >= 100;
+      const hasDragons = monsters.filter(m => m.type_en === "Dragon").length >= 60;
+      const hasUndead = monsters.filter(m => m.type_en === "Undead").length >= 60;
       const hasTarrasque = Boolean(App.getMonsterById("tarrasque") && App.getMonsterById("ancient-red-dragon") && App.getMonsterById("lich") && App.getMonsterById("aarakocra") && App.getMonsterById("abominable-yeti"));
-      assert("11. Bestiariusz AideDD (428+) i Licencje", "Bestiariusz zawiera wszystkie Bestie (90+), Smoki (40+), Nieumarłych (30+), Czarty, Aberracje i Tarrasque'a",
+      assert("11. Bestiariusz AideDD (964+) i Licencje", "Bestiariusz zawiera wszystkie Bestie (100+), Smoki (60+), Nieumarłych (60+), Czarty, Aberracje, Gigantów i Tarrasque'a",
         hasBeasts && hasDragons && hasUndead && hasTarrasque,
         `Bestie: ${monsters.filter(m => m.type_en === "Beast").length}, Smoki: ${monsters.filter(m => m.type_en === "Dragon").length}, Nieumarli: ${monsters.filter(m => m.type_en === "Undead").length}`
       );

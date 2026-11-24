@@ -99,7 +99,7 @@ const App = {
       m.type_en = m.type_en || "Monstrosity";
       m.type_pl = m.type_pl || m.type_en;
       m.cr_num = typeof m.cr_num === "number" ? m.cr_num : (parseFloat(m.cr) || 0);
-      m.aidedd_url = `https://www.aidedd.org/dnd/monstres.php?vo=${m.id}`;
+      m.aidedd_url = `https://www.aidedd.org/dnd/monstres.php?vo=${encodeURIComponent(m.aidedd_slug || m.id)}`;
     });
   },
 
@@ -2632,6 +2632,7 @@ const App = {
               <option value="Staff" ${this.state.itemFilterCat==='Staff'?'selected':''}>🪄 Kostury (Staves)</option>
               <option value="Wand" ${this.state.itemFilterCat==='Wand'?'selected':''}>⚡ Różdżki (Wands)</option>
               <option value="Potion" ${this.state.itemFilterCat==='Potion'?'selected':''}>🧪 Mikstury i Oleje (Potions)</option>
+              <option value="Scroll" ${this.state.itemFilterCat==='Scroll'?'selected':''}>📜 Zwoje (Scrolls)</option>
               <option value="Artifact" ${this.state.itemFilterCat==='Artifact'?'selected':''}>🏆 Artefakty (Artifacts)</option>
             </select>
             <select onchange="App.state.itemFilterRarity=this.value;App.render();">
@@ -4294,6 +4295,7 @@ const App = {
               <option value="Staff" ${ic==='Staff'?'selected':''}>🪄 Kostury (Staves)</option>
               <option value="Wand" ${ic==='Wand'?'selected':''}>⚡ Różdżki (Wands)</option>
               <option value="Potion" ${ic==='Potion'?'selected':''}>🧪 Mikstury i Oleje (Potions)</option>
+              <option value="Scroll" ${ic==='Scroll'?'selected':''}>📜 Zwoje (Scrolls)</option>
               <option value="Artifact" ${ic==='Artifact'?'selected':''}>🏆 Artefakty (Artifacts)</option>
             </select>
             <select onchange="App.state.itemFilterRarity=this.value;App.render();">
@@ -4693,6 +4695,7 @@ const App = {
     if (!it) return;
     const char = this.getActiveChar();
     const equipped = char && (char.magicItems || []).includes(it.id);
+    const aideddUrl = `https://www.aidedd.org/dnd/om.php?vo=${encodeURIComponent(it.aidedd_slug || it.id)}`;
 
     this.openModal(
       `💍 Podstrona Przedmiotu: ${this.tPlain(it.name_pl, it.name_en)} (${it.rarity})`,
@@ -4701,6 +4704,7 @@ const App = {
           <div class="badge-row">
             <span class="badge badge-gold">✨ Rzadkość: ${it.rarity}</span>
             <span class="badge">${it.category}</span>
+            ${it.source ? `<span class="badge badge-cyan">📚 ${it.source}</span>` : ''}
             ${it.attunement ? `<span class="badge badge-arcane">🔗 ${it.attunement_req || 'Wymaga zestrojenia (Attunement)'}</span>` : `<span class="badge badge-cyan">Bez zestrojenia</span>`}
             ${it.bonus_ac ? `<span class="badge badge-gold">🛡️ +${it.bonus_ac} do KP (Auto)</span>` : ''}
             ${it.bonus_saves ? `<span class="badge badge-emerald">🛡️ +${it.bonus_saves} do Rzutów Obronnych (Auto)</span>` : ''}
@@ -4709,9 +4713,11 @@ const App = {
           <div class="subclass-feature-item" style="font-size:0.92rem;line-height:1.65;">
             ${this.tDesc(it)}
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-subtle);padding-top:12px;">
-            <div>
-              ${it.roll ? `<button class="btn-secondary" onclick="App.rollCustomFormula('${it.roll}', '${it.roll_label || it.name_pl}')">🎲 Rzuć ${it.roll.replace(/d/g,'k')}</button>` : ''}
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--border-subtle);padding-top:12px;">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              ${it.roll ? `<button class="btn-secondary" onclick="App.rollCustomFormula('${it.roll}', '${(it.roll_label || it.name_pl).replace(/'/g, "\\'")}')">🎲 Rzuć ${it.roll.replace(/d/g,'k')}</button>` : ''}
+              <a href="${aideddUrl}" target="_blank" rel="noopener" class="btn-ghost btn-sm" style="text-decoration:none;">🔗 Karta AideDD ↗</a>
+              ${it.wikidot_url ? `<a href="${it.wikidot_url}" target="_blank" rel="noopener" class="btn-ghost btn-sm" style="text-decoration:none;">🔗 Wikidot 5e ↗</a>` : ''}
             </div>
             <div style="display:flex;gap:8px;">
               ${char ? `
@@ -4983,7 +4989,7 @@ const App = {
   renderDetailedMonsterCard(m, isModal = false) {
     const isXL = Boolean(isModal || this.state.monsterForceXL);
     const portraitUri = window.getMonsterPortraitUri ? window.getMonsterPortraitUri(m) : "";
-    const aideddUrl = `https://www.aidedd.org/dnd/monstres.php?vo=${m.id}`;
+    const aideddUrl = `https://www.aidedd.org/dnd/monstres.php?vo=${encodeURIComponent(m.aidedd_slug || m.id)}`;
     const allActions = m.actions || [];
     const primaryActions = isXL ? allActions : allActions.slice(0, 2);
     const extraActions = isXL ? [] : allActions.slice(2);
@@ -5140,7 +5146,7 @@ const App = {
   openMonsterDetailModal(monsterId) {
     const m = (window.DND_MONSTERS || []).find(x => x.id === monsterId);
     if (!m) return;
-    const aideddUrl = `https://www.aidedd.org/dnd/monstres.php?vo=${m.id}`;
+    const aideddUrl = `https://www.aidedd.org/dnd/monstres.php?vo=${encodeURIComponent(m.aidedd_slug || m.id)}`;
     this.openModal(
       `🐉 Karta Potwora: ${this.tPlain(m.name_pl, m.name_en)} (SW ${m.cr})`,
       `
