@@ -1784,6 +1784,40 @@ const App = {
 
     const t1 = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
     this.lastRenderTimeMs = Math.round((t1 - t0) * 100) / 100;
+    this.updateDocumentMetadata();
+  },
+
+  updateDocumentMetadata(customTitle = null, customDesc = null) {
+    const char = this.getActiveChar();
+    const cls = char ? this.getClassData(char.classId) : null;
+    const race = char ? this.getRaceData(char.raceId) : null;
+
+    const tabTitles = {
+      characters: "Galeria Bohaterów — Kroniki D&D 5e",
+      builder: char ? `Kreator: ${char.name} (${race ? race.name_pl : ''} ${cls ? cls.name_pl : ''} Poz. ${char.level}) — Kroniki D&D 5e` : "Kreator Postaci (1–20) — Kroniki D&D 5e",
+      sheet: char ? `Karta Postaci: ${char.name} (${cls ? cls.name_pl : ''} Poz. ${char.level}) — Kroniki D&D 5e` : "Interaktywna Karta Postaci — Kroniki D&D 5e",
+      spells: (this.state.spellFilters && this.state.spellFilters.onlyCharSpells && char)
+        ? `Księga Zaklęć Bohatera: ${char.name} (${(char.knownSpells||[]).length} czarów) — Kroniki D&D 5e`
+        : `Księga Zaklęć D&D 5e (${(window.DND_SPELLS||[]).length} czarów, Kręgi 0–9) — Kroniki D&D 5e`,
+      bestiary: `Bestiariusz D&D 5e (${(window.DND_MONSTERS||[]).length} potworów AideDD, SW 0–30) — Kroniki D&D 5e`,
+      compendium: `Kompendium Wikidot D&D 5e (73 Rasy, 13 Klas, 79 Podklas, 255 Przedmiotów) — Kroniki D&D 5e`
+    };
+
+    const finalTitle = customTitle || tabTitles[this.state.tab] || "Kroniki D&D 5e — Kreator, Karta Postaci, Księga Zaklęć & Bestiariusz";
+    const finalDesc = customDesc || "Kroniki D&D 5e — Interaktywny Kreator Postaci (poziomy 1–20), Karta Postaci, Księga Zaklęć (Kręgi 0–9), 73 Rasy, 13 Klas, 79 Podklas, 255 Magicznych Przedmiotów i Bestiariusz 114 Potworów wg Wikidot 5e i AideDD.";
+
+    if (typeof document !== "undefined") {
+      document.title = finalTitle;
+      const setMeta = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.setAttribute("content", val);
+      };
+      setMeta("meta-description", finalDesc);
+      setMeta("meta-og-title", finalTitle);
+      setMeta("meta-og-desc", finalDesc);
+      setMeta("meta-tw-title", finalTitle);
+      setMeta("meta-tw-desc", finalDesc);
+    }
   },
 
   translateDOMHtmlToEn(html) {

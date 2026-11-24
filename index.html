@@ -22,32 +22,129 @@
 <html lang="pl" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0f0c1b">
-  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-  <meta name="googlebot" content="index, follow">
-  <meta name="bingbot" content="index, follow">
-  <meta name="description" content="Kroniki D&D 5e — Interaktywny Kreator Postaci (poziomy 1–20), Karta Postaci, Księga Zaklęć (Kręgi 0–9), 73 Rasy, 79 Podklas, 255 Magicznych Przedmiotów i Bestiariusz 114 Potworów wg Wikidot 5e i AideDD.">
-  <meta name="keywords" content="D&D 5e, Karta Postaci, Character Builder, Wikidot 5e, AideDD, Księga Zaklęć, Bestiariusz, Dungeons and Dragons, PL, EN">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+  <!-- Podstawowe Metadane SEO i Aplikacji -->
+  <title>Kroniki D&D 5e — Kreator Postaci (1–20), Karta Postaci, Księga Zaklęć & Bestiariusz</title>
+  <meta name="application-name" content="Kroniki D&D 5e">
+  <meta name="apple-mobile-web-app-title" content="Kroniki D&D 5e">
+  <meta name="author" content="mackos1112 — Kroniki D&D 5e">
+  <meta name="generator" content="Kroniki D&D 5e Engine (Vanilla JS / PWA)">
+  <meta name="description" id="meta-description" content="Kroniki D&D 5e — Interaktywny Kreator Postaci (poziomy 1–20), Karta Postaci, Księga Zaklęć (Kręgi 0–9), 73 Rasy, 13 Klas, 79 Podklas, 73 Atuty, 255 Magicznych Przedmiotów i Bestiariusz 114 Potworów wg Wikidot 5e i AideDD.">
+  <meta name="keywords" content="D&D 5e, Dungeons and Dragons, Karta Postaci, Kreator Postaci, Character Builder, Character Sheet, Wikidot 5e, AideDD, Księga Zaklęć, Spellbook, Bestiariusz, Podklasy, Rasy, Atuty, Magiczne Przedmioty, RPG, SRD 5.1, PL, EN">
+  <meta name="subject" content="Dungeons & Dragons 5th Edition Character Builder, Interactive Sheet, Spellbook & Bestiary">
+  <meta name="classification" content="Role-Playing Games / Tabletop RPG Utility">
+  <meta name="rating" content="General">
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0f0c1b" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f5ecd7" media="(prefers-color-scheme: light)">
+  <meta name="copyright" content="SRD 5.1 © Wizards of the Coast LLC (CC-BY-4.0); Kod aplikacji: MIT License">
+  <link rel="license" href="https://creativecommons.org/licenses/by/4.0/legalcode">
   <link rel="canonical" href="https://mackos1112.github.io/KartaPostaciDND/">
+  <link rel="icon" type="image/svg+xml" href="og-banner.svg">
+  <link rel="apple-touch-icon" href="og-banner.svg">
+
+  <!-- Dyrektywy dla Robotów Wyszukiwarek i Crawlerów -->
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="bingbot" content="index, follow">
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="https://mackos1112.github.io/KartaPostaciDND/sitemap.xml">
+
+  <!-- Open Graph (Facebook, Discord, Messenger, LinkedIn) -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Kroniki D&D 5e — Kreator, Karta Postaci, Księga Zaklęć & Bestiariusz">
-  <meta property="og:description" content="Kompletny Kreator i Karta Postaci D&D 5e (poziomy 1–20), 73 Rasy, 13 Klas, 79 Podklas, 400+ Zaklęć, 255 Magicznych Przedmiotów i Bestiariusz 114 Potworów.">
+  <meta property="og:site_name" content="Kroniki D&D 5e">
+  <meta property="og:title" id="meta-og-title" content="Kroniki D&D 5e — Kreator Postaci (1–20), Karta, Księga Zaklęć & Bestiariusz">
+  <meta property="og:description" id="meta-og-desc" content="Kompletny Kreator i Interaktywna Karta Postaci D&D 5e (poziomy 1–20), 73 Rasy, 13 Klas, 79 Podklas, 400+ Zaklęć (0–9), 255 Magicznych Przedmiotów i Bestiariusz 114 Potworów (PL + EN).">
   <meta property="og:url" content="https://mackos1112.github.io/KartaPostaciDND/">
+  <meta property="og:image" content="https://mackos1112.github.io/KartaPostaciDND/og-banner.svg">
+  <meta property="og:image:type" content="image/svg+xml">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Kroniki D&D 5e — Kreator Postaci, Karta Postaci, Księga Zaklęć i Bestiariusz">
+  <meta property="og:locale" content="pl_PL">
+  <meta property="og:locale:alternate" content="en_US">
+
+  <!-- Twitter / X Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" id="meta-tw-title" content="Kroniki D&D 5e — Kreator Postaci (1–20), Karta, Księga Zaklęć & Bestiariusz">
+  <meta name="twitter:description" id="meta-tw-desc" content="Interaktywny Kreator i Karta Postaci D&D 5e: 73 Rasy, 13 Klas, 79 Podklas, 400+ Zaklęć, 255 Artefaktów i 114 Potworów Bestiariusza (Wikidot 5e & AideDD).">
+  <meta name="twitter:image" content="https://mackos1112.github.io/KartaPostaciDND/og-banner.svg">
+  <meta name="twitter:image:alt" content="Kroniki D&D 5e — Karta Postaci i Kompendium">
+
+  <!-- Dublin Core Bibliographic Metadata -->
+  <meta name="DC.title" content="Kroniki D&D 5e — Kreator Postaci, Karta Postaci, Księga Zaklęć & Bestiariusz">
+  <meta name="DC.creator" content="mackos1112">
+  <meta name="DC.subject" content="Dungeons & Dragons 5e; Character Sheet; Spellbook; Bestiary; SRD 5.1">
+  <meta name="DC.description" content="Kompleksowa aplikacja webowa D&D 5e z kreatorem postaci (1-20), kartą postaci, księgą zaklęć i bestiariuszem w języku polskim i angielskim.">
+  <meta name="DC.language" content="pl">
+  <meta name="DC.rights" content="Creative Commons Attribution 4.0 International (CC-BY-4.0) / MIT License">
+  <meta name="DC.type" content="InteractiveResource">
+  <meta name="DC.format" content="text/html">
+
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Kroniki D&D 5e — Kreator, Rozwój Postaci & Księga Zaklęć (Wikidot)</title>
+
+  <!-- Dane Strukturalne Schema.org (JSON-LD Graph) -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "Kroniki D&D 5e",
-    "url": "https://mackos1112.github.io/KartaPostaciDND/",
-    "applicationCategory": "GameApplication",
-    "operatingSystem": "All",
-    "inLanguage": ["pl", "en"],
-    "license": "https://creativecommons.org/licenses/by/4.0/legalcode",
-    "description": "Interaktywny Kreator Postaci D&D 5e (poziomy 1–20), Karta Postaci, Księga Zaklęć (Kręgi 0–9), Bestiariusz Potworów AideDD i Kompendium Wikidot 5e."
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://mackos1112.github.io/KartaPostaciDND/#website",
+        "url": "https://mackos1112.github.io/KartaPostaciDND/",
+        "name": "Kroniki D&D 5e",
+        "alternateName": "D&D 5e Chronicles — Character Builder, Sheet, Spellbook & Bestiary",
+        "inLanguage": ["pl-PL", "en-US"],
+        "license": "https://creativecommons.org/licenses/by/4.0/legalcode"
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://mackos1112.github.io/KartaPostaciDND/#webapp",
+        "name": "Kroniki D&D 5e — Kreator, Karta Postaci, Księga Zaklęć & Bestiariusz",
+        "url": "https://mackos1112.github.io/KartaPostaciDND/",
+        "image": "https://mackos1112.github.io/KartaPostaciDND/og-banner.svg",
+        "applicationCategory": "GameApplication",
+        "applicationSubCategory": "Tabletop Role-Playing Game Companion",
+        "operatingSystem": "All",
+        "browserRequirements": "Requires JavaScript and HTML5",
+        "inLanguage": ["pl", "en"],
+        "isAccessibleForFree": true,
+        "license": "https://creativecommons.org/licenses/by/4.0/legalcode",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "PLN"
+        },
+        "featureList": [
+          "Kreator Postaci D&D 5e (Poziomy 1–20)",
+          "73 Grywalne Rasy i Rodowody z portretami SVG i tabelami wariantów",
+          "13 Oficjalnych Klas i 79 Podklas z pełną osią zdolności 1–20",
+          "Interaktywna Karta Postaci z kalkulatorem kości k4–k100, stanami i wyczerpaniem",
+          "Kuźnia Broni, Pancerzy i Magicznych Przedmiotów (255 artefaktów)",
+          "Księga Zaklęć Kręgów 0–9 (400+ czarów) oraz Osobista Księga Zaklęć Postaci",
+          "Bestiariusz D&D 5e (114 potworów wg AideDD) z Trackerem Starcia"
+        ],
+        "description": "Interaktywny Kreator Postaci D&D 5e (poziomy 1–20), Karta Postaci, Księga Zaklęć (Kręgi 0–9), Bestiariusz Potworów AideDD i Kompendium Wikidot 5e."
+      },
+      {
+        "@type": "Dataset",
+        "@id": "https://mackos1112.github.io/KartaPostaciDND/#dataset",
+        "name": "Kompendium i Bestiariusz D&D 5e (PL/EN — SRD 5.1 / Wikidot / AideDD)",
+        "description": "Zestaw danych D&D 5e obejmujący 13 klas (poziomy 1-20), 79 podklas, 73 rasy, 73 atuty, 15 teł, 400+ zaklęć kręgów 0-9, 255 magicznych przedmiotów oraz 114 potworów w języku polskim i angielskim.",
+        "url": "https://mackos1112.github.io/KartaPostaciDND/",
+        "license": "https://creativecommons.org/licenses/by/4.0/legalcode",
+        "creator": {
+          "@type": "Organization",
+          "name": "Wizards of the Coast LLC (SRD 5.1) / Kroniki D&D 5e"
+        },
+        "keywords": ["D&D 5e", "SRD 5.1", "Spells", "Monsters", "Races", "Classes", "Subclasses", "Magic Items", "Feats"]
+      }
+    ]
   }
   </script>
   <link rel="manifest" href="manifest.json">

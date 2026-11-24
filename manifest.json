@@ -1,13 +1,23 @@
 {
-  "name": "Kroniki D&D 5e — Kreator Postaci & Księga Zaklęć",
-  "short_name": "Karta D&D 5e",
-  "description": "Aplikacja do tworzenia oraz rozwoju postaci w D&D 5e (dane Wikidot) wraz z pełną Księgą Zaklęć",
+  "name": "Kroniki D&D 5e — Kreator Postaci, Karta, Księga Zaklęć & Bestiariusz",
+  "short_name": "Kroniki D&D 5e",
+  "description": "Interaktywny Kreator Postaci D&D 5e (poziomy 1–20), Karta Postaci, Księga Zaklęć (Kręgi 0–9), 73 Rasy, 79 Podklas, 255 Magicznych Przedmiotów i Bestiariusz 114 Potworów wg Wikidot 5e i AideDD.",
+  "lang": "pl-PL",
+  "dir": "ltr",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0f0c1b",
-  "theme_color": "#d4af37",
+  "theme_color": "#e5c158",
   "orientation": "any",
+  "categories": ["games", "entertainment", "utilities", "reference"],
   "icons": [
+    {
+      "src": "og-banner.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
     {
       "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23161229'/><polygon points='50,8 90,30 90,70 50,92 10,70 10,30' fill='none' stroke='%23d4af37' stroke-width='6'/><text x='50' y='62' font-size='34' font-family='serif' font-weight='bold' fill='%23d4af37' text-anchor='middle'>20</text></svg>",
       "sizes": "192x192",
