@@ -2714,12 +2714,46 @@ const App = {
         ${steps.map(s => `
           <button class="step-pill ${step === s.n ? 'active' : ''}" onclick="App.state.builderStep = ${s.n}; App.render();">
             <span class="step-num">${s.n}</span>
-            <span>${s.label}</span>
+            <span>${s.label.replace(/^\d+\.\s*/, '')}</span>
           </button>
         `).join("")}
       </div>
 
+      <!-- Mobile & Desktop Quick Step Prev/Next Bar (Top) -->
+      <div class="builder-step-nav">
+        <button class="btn-ghost btn-sm" ${step <= 1 ? 'disabled style="opacity:0.4;pointer-events:none;"' : ''} onclick="App.state.builderStep = Math.max(1, ${step - 1}); App.render(); window.scrollTo({top:0,behavior:'smooth'});">
+          ← Poprzedni krok
+        </button>
+        <span class="builder-step-indicator">Krok ${step} z 6: <strong>${steps[step - 1].label.replace(/^\d+\.\s*/, '')}</strong></span>
+        ${step < 6 ? `
+          <button class="btn-primary btn-sm" onclick="App.state.builderStep = Math.min(6, ${step + 1}); App.render(); window.scrollTo({top:0,behavior:'smooth'});">
+            Następny krok (${steps[step].label.replace(/^\d+\.\s*/, '')}) →
+          </button>
+        ` : `
+          <button class="btn-primary btn-sm" onclick="App.switchTab('sheet'); window.scrollTo({top:0,behavior:'smooth'});">
+            📜 Gotowe — Otwórz Kartę Postaci →
+          </button>
+        `}
+      </div>
+
       ${stepContent}
+
+      <!-- Quick Step Prev/Next Bar (Bottom) -->
+      <div class="builder-step-nav" style="margin-top:18px;">
+        <button class="btn-secondary btn-sm" ${step <= 1 ? 'disabled style="opacity:0.4;pointer-events:none;"' : ''} onclick="App.state.builderStep = Math.max(1, ${step - 1}); App.render(); window.scrollTo({top:0,behavior:'smooth'});">
+          ← Wróć do kroku ${Math.max(1, step - 1)}
+        </button>
+        <span class="builder-step-indicator">Krok ${step} / 6</span>
+        ${step < 6 ? `
+          <button class="btn-primary btn-sm" onclick="App.state.builderStep = Math.min(6, ${step + 1}); App.render(); window.scrollTo({top:0,behavior:'smooth'});">
+            Dalej: Krok ${step + 1} (${steps[step].label.replace(/^\d+\.\s*/, '')}) →
+          </button>
+        ` : `
+          <button class="btn-primary btn-sm" onclick="App.switchTab('sheet'); window.scrollTo({top:0,behavior:'smooth'});">
+            📜 Zakończ i Otwórz Kartę Postaci →
+          </button>
+        `}
+      </div>
     `;
   },
 
@@ -3188,6 +3222,7 @@ const App = {
 
         <!-- CENTER COLUMN: COMBAT VITALS, HP, SPELLS & CLASS FEATURES -->
         <div class="sheet-col-center" style="${(this.state.mobileSheetSection && this.state.mobileSheetSection !== 'all' && this.state.mobileSheetSection !== 'combat' && this.state.mobileSheetSection !== 'magic') ? 'display:none;' : ''}">
+          <div class="sheet-combat-group" style="${(this.state.mobileSheetSection === 'magic') ? 'display:none;' : ''}">
           <div class="vitals-grid">
             <div class="vital-card ac" style="cursor:pointer;" onclick="App.openArmorCreatorModal()" title="Kliknij, aby otworzyć Kreator Pancerza i Tarczy">
               <div class="vital-val">🛡️ ${ac}</div>
@@ -3310,7 +3345,7 @@ const App = {
             ` : ''}
 
             <div class="wikidot-table-wrap" style="margin:6px 0 0;">
-              <table class="wikidot-table">
+              <table class="wikidot-table weapons-responsive-table">
                 <thead>
                   <tr>
                     <th>Nazwa Broni / Ataku</th>
@@ -3390,8 +3425,10 @@ const App = {
               </table>
             </div>
           </div>
+          </div>
 
           <!-- Spellcasting & Spell Slots on Sheet (Always available so every character can open their personal Spellbook) -->
+          <div class="sheet-magic-group" style="${(this.state.mobileSheetSection === 'combat') ? 'display:none;' : ''}">
           <div class="card" style="margin-bottom:16px;">
             <div class="card-header">
               <div>
@@ -3494,6 +3531,7 @@ const App = {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
 
