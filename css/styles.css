@@ -512,6 +512,12 @@ html, body {
   border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.88rem;
+  line-height: 1.3;
+  text-align: center;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   cursor: pointer;
   transition: all 0.18s;
   border: 1px solid transparent;
@@ -590,13 +596,15 @@ html, body {
   flex-direction: column;
   gap: 14px;
   flex-shrink: 0;
-  content-visibility: auto;
-  contain-intrinsic-size: 0 340px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .race-card-2x2 > *,
 .subclass-card-detailed > * {
   flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .race-card-xl {
@@ -695,8 +703,8 @@ html, body {
   justify-content: space-between;
   gap: 12px;
   flex-shrink: 0;
-  content-visibility: auto;
-  contain-intrinsic-size: 0 280px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .spell-card-xl {
@@ -760,6 +768,10 @@ html, body {
   position: relative;
   overflow: visible;
   flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .card:hover {
@@ -779,11 +791,19 @@ html, body {
   gap: 10px;
   margin-bottom: 10px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .card-header > *:first-child {
   flex: 1 1 180px;
   min-width: 0;
+  max-width: 100%;
+}
+
+.card-header > div > div {
+  min-width: 0;
+  flex: 1;
 }
 
 .card-title {
@@ -791,8 +811,8 @@ html, body {
   font-size: 1.08rem;
   font-weight: 700;
   color: var(--gold-bright);
-  line-height: 1.3;
-  overflow-wrap: break-word;
+  line-height: 1.32;
+  overflow-wrap: anywhere;
   word-wrap: break-word;
   word-break: break-word;
   hyphens: auto;
@@ -823,11 +843,15 @@ html, body {
   border-radius: 99px;
   font-size: 0.72rem;
   font-weight: 600;
+  line-height: 1.35;
   background: rgba(255, 255, 255, 0.07);
   color: var(--text-muted);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0;
-  white-space: nowrap;
+  flex-shrink: 1;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .badge-gold {
@@ -1557,8 +1581,8 @@ input:focus, select:focus, textarea:focus {
   gap: 12px;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  content-visibility: auto;
-  contain-intrinsic-size: 0 320px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .subclass-card-detailed:hover {
@@ -1675,37 +1699,34 @@ input:focus, select:focus, textarea:focus {
   }
   .char-pill-name {
     font-size: 0.76rem;
-    max-width: 105px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: 145px;
+    white-space: normal;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
   }
   .char-pill-hp {
     font-size: 0.7rem;
     padding: 2px 6px;
+    white-space: nowrap;
   }
   .top-actions {
     width: 100%;
+    flex-wrap: wrap;
     justify-content: space-between;
-    overflow-x: auto;
     padding-bottom: 2px;
-    gap: 5px;
-    scrollbar-width: none;
-  }
-  .top-actions::-webkit-scrollbar {
-    display: none;
+    gap: 4px;
   }
   .lang-btn {
-    padding: 5px 7px;
-    font-size: 0.7rem;
+    padding: 4px 6px;
+    font-size: 0.68rem;
   }
   .icon-btn {
-    padding: 5px 9px;
-    font-size: 0.78rem;
+    padding: 4px 8px;
+    font-size: 0.75rem;
     flex-shrink: 0;
   }
 
-  /* Dolny Pasek Nawigacji (6 zakładek dopasowanych do kciuka) */
+  /* Dolny Pasek Nawigacji (6 zakładek dopasowanych do kciuka — pełne napisy bez ucinania) */
   .main-nav {
     position: fixed;
     bottom: 0;
@@ -1719,7 +1740,7 @@ input:focus, select:focus, textarea:focus {
     backdrop-filter: blur(14px);
     border-top: 1.5px solid var(--border-gold);
     border-bottom: none;
-    padding: 5px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 3px calc(5px + env(safe-area-inset-bottom, 0px));
     box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.65);
   }
   html.light .main-nav {
@@ -1729,22 +1750,26 @@ input:focus, select:focus, textarea:focus {
   .nav-item {
     flex-direction: column;
     justify-content: center;
+    align-items: center;
     gap: 2px;
-    padding: 5px 2px;
-    font-size: 0.64rem;
+    padding: 4px 1px;
+    font-size: 0.6rem;
+    line-height: 1.1;
     border-radius: 8px;
     min-width: 0;
   }
   .nav-label {
     width: 100%;
     text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.12;
+    word-break: break-word;
   }
   .nav-icon {
-    font-size: 1.15rem;
-    line-height: 1.1;
+    font-size: 1.08rem;
+    line-height: 1;
   }
 
   /* Główny kontener i nagłówki sekcji */
@@ -1770,27 +1795,51 @@ input:focus, select:focus, textarea:focus {
   .grid-cards,
   .grid-races-detailed,
   .grid-spells-detailed,
-  .grid-subclasses-detailed {
+  .grid-subclasses-detailed,
+  .race-card-xl .race-traits-grid,
+  .main-content div[style*="minmax(340px"],
+  .main-content div[style*="minmax(320px"],
+  .main-content div[style*="minmax(260px"],
+  .main-content div[style*="minmax(240px"],
+  .main-content div[style*="minmax(220px"],
+  .main-content div[style*="minmax(190px"] {
     grid-template-columns: 1fr !important;
     gap: 12px;
+  }
+  .main-content div[style*="repeat(6,1fr)"],
+  .modal-body div[style*="repeat(6,1fr)"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  .main-content div[style*="min-width:200px"],
+  .main-content div[style*="min-width:160px"],
+  .main-content div[style*="min-width:140px"] {
+    min-width: 0 !important;
   }
   .card,
   .race-card-2x2,
   .spell-card-2x2,
   .subclass-card-detailed {
-    padding: 13px 12px;
+    padding: 13px 11px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
   .card-header {
     gap: 8px;
   }
+  .card-title {
+    font-size: 1rem !important;
+    line-height: 1.3 !important;
+  }
   .portrait-lg {
-    width: 56px !important;
-    height: 56px !important;
-    border-radius: 11px;
+    width: 50px !important;
+    height: 50px !important;
+    border-radius: 10px;
   }
   .portrait-thumb {
-    width: 44px !important;
-    height: 44px !important;
+    width: 42px !important;
+    height: 42px !important;
   }
   .race-vitals-grid,
   .spell-meta-grid {
@@ -1798,8 +1847,31 @@ input:focus, select:focus, textarea:focus {
     padding: 8px;
     gap: 6px;
   }
+  .race-vital-item,
+  .spell-meta-item,
+  .race-trait-box,
+  .subclass-feature-item,
+  .race-lore-box,
+  .spell-desc-box {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    padding: 9px 10px;
+  }
+  .race-vital-val,
+  .spell-meta-val {
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .vital-val {
+    font-size: 1.22rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   .vitals-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
   .vital-card:last-child:nth-child(odd) {
@@ -1852,8 +1924,13 @@ input:focus, select:focus, textarea:focus {
   /* Tabele na telefonie (Bronie, Progresja 1-20) */
   .wikidot-table th,
   .wikidot-table td {
-    padding: 7px 8px;
-    font-size: 0.78rem;
+    padding: 6px 7px;
+    font-size: 0.76rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .wikidot-table td[style*="white-space:nowrap"] {
+    white-space: normal !important;
   }
 
   /* Modale (Podstrony i Kreatory) jako wygodny dolny arkusz (Bottom Sheet) na telefonie */
@@ -1915,6 +1992,20 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+@media (max-width: 520px) {
+  .race-vitals-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .card-header > div:last-child {
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+  }
+}
+
 /* Ustandaryzowane akordeony dla nadmiarowych danych na kartach 2x2 oraz pasek paginacji */
 .std-accordion {
   background: var(--bg-deep);
@@ -1934,8 +2025,16 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   background: linear-gradient(135deg, rgba(229, 193, 88, 0.12), rgba(139, 92, 246, 0.08));
   list-style: none;
+}
+
+.std-accordion summary > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .std-accordion summary::-webkit-details-marker {
@@ -1947,6 +2046,8 @@ input:focus, select:focus, textarea:focus {
   font-size: 0.72rem;
   color: var(--arcane-bright);
   font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .std-accordion[open] summary::after {

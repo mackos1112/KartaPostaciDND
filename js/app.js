@@ -2360,7 +2360,7 @@ const App = {
     // KROK 4: TŁO, UMIEJĘTNOŚCI I ATUTY
     else if (step === 4) {
       stepContent = `
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%, 320px),1fr));gap:18px;">
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">
               <h3 class="card-title">📜 Pochodzenie / Tło (Background — ${window.DND_BACKGROUNDS.length})</h3>
@@ -2492,7 +2492,7 @@ const App = {
     // KROK 6: EKWIPUNEK, KREATOR BRONI I PANCERZA
     else if (step === 6) {
       stepContent = `
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%, 300px),1fr));gap:18px;">
           <div class="card">
             <div class="card-header" style="margin-bottom:10px;">
               <div>
