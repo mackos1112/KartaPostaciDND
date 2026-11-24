@@ -646,18 +646,28 @@ const App = {
   },
 
   // ---------------- HELPERS & TRANSLATION FORMATTERS ----------------
+  cleanPolishLabel(pl, en) {
+    if (!pl) return en || "";
+    if (!en) return pl;
+    const esc = String(en).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const stripped = String(pl).replace(new RegExp(`\\s*\\(${esc}\\)\\s*$`, "i"), "").trim();
+    return stripped || pl;
+  },
+
   t(pl, en) {
-    if (this.state.lang === "pl") return pl || en;
-    if (this.state.lang === "en") return en || pl;
-    if (!en || pl === en) return pl;
-    return `${pl} <span class="card-en-sub" style="display:inline;opacity:0.75;">(${en})</span>`;
+    const cPl = this.cleanPolishLabel(pl, en);
+    if (this.state.lang === "pl") return cPl || en;
+    if (this.state.lang === "en") return en || cPl;
+    if (!en || cPl.toLowerCase() === String(en).toLowerCase()) return cPl;
+    return `${cPl} <span class="card-en-sub" style="display:inline;opacity:0.75;">(${en})</span>`;
   },
 
   tPlain(pl, en) {
-    if (this.state.lang === "pl") return pl || en;
-    if (this.state.lang === "en") return en || pl;
-    if (!en || pl === en) return pl;
-    return `${pl} (${en})`;
+    const cPl = this.cleanPolishLabel(pl, en);
+    if (this.state.lang === "pl") return cPl || en;
+    if (this.state.lang === "en") return en || cPl;
+    if (!en || cPl.toLowerCase() === String(en).toLowerCase()) return cPl;
+    return `${cPl} (${en})`;
   },
 
   tDesc(obj) {
