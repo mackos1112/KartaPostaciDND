@@ -322,15 +322,15 @@ window.DND_TEST_SUITE = {
       );
 
       // ----------------------------------------------------------------------
-      // 11. TESTY BESTIARIUSZA AIDEDD (114 POTWORÓW) ORAZ LICENCJI
+      // 11. TESTY BESTIARIUSZA AIDEDD (WSZYSTKIE 428 POTWORÓW) ORAZ LICENCJI
       // ----------------------------------------------------------------------
       const monsters = window.DND_MONSTERS || [];
-      assert("11. Bestiariusz AideDD i Licencje", "Załadowano pełny Bestiariusz D&D 5e z aidedd.org (min. 80 potworów od CR 0 do CR 30)", monsters.length >= 80, `Potworów w bazie: ${monsters.length}`);
-      const hasBeasts = monsters.filter(m => m.type_en === "Beast").length >= 20;
-      const hasDragons = monsters.filter(m => m.type_en === "Dragon").length >= 7;
-      const hasUndead = monsters.filter(m => m.type_en === "Undead").length >= 12;
-      const hasTarrasque = Boolean(App.getMonsterById("tarrasque") && App.getMonsterById("ancient-red-dragon") && App.getMonsterById("lich"));
-      assert("11. Bestiariusz AideDD i Licencje", "Bestiariusz zawiera Bestie (Wild Shape/Polimorfia), Smoki, Nieumarłych, Licza, Starożytnego Czerwonego Smoka i Tarrasque'a",
+      assert("11. Bestiariusz AideDD (428+) i Licencje", "Załadowano pełny Bestiariusz wszystkich 428+ potworów D&D 5e z aidedd.org/monster-dnd5 (od CR 0 do CR 30)", monsters.length >= 428, `Potworów w bazie: ${monsters.length}`);
+      const hasBeasts = monsters.filter(m => m.type_en === "Beast").length >= 80;
+      const hasDragons = monsters.filter(m => m.type_en === "Dragon").length >= 40;
+      const hasUndead = monsters.filter(m => m.type_en === "Undead").length >= 30;
+      const hasTarrasque = Boolean(App.getMonsterById("tarrasque") && App.getMonsterById("ancient-red-dragon") && App.getMonsterById("lich") && App.getMonsterById("aarakocra") && App.getMonsterById("abominable-yeti"));
+      assert("11. Bestiariusz AideDD (428+) i Licencje", "Bestiariusz zawiera wszystkie Bestie (90+), Smoki (40+), Nieumarłych (30+), Czarty, Aberracje i Tarrasque'a",
         hasBeasts && hasDragons && hasUndead && hasTarrasque,
         `Bestie: ${monsters.filter(m => m.type_en === "Beast").length}, Smoki: ${monsters.filter(m => m.type_en === "Dragon").length}, Nieumarli: ${monsters.filter(m => m.type_en === "Undead").length}`
       );
