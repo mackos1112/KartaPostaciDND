@@ -46,7 +46,9 @@ const App = {
     rolledPool: [],
     selectedPoolIdx: null,
     selectedClassView: "wizard",
-    mobileSheetSection: "all", // all | combat | stats | magic | gear
+    layoutMode: "auto", // auto | mobile | desktop
+    mobileFiltersOpen: false,
+    mobileSheetSection: "combat", // combat | stats | magic | gear | all
     pageLimits: {
       races: 24,
       feats: 24,
@@ -54,6 +56,70 @@ const App = {
       spells: 36,
       monsters: 24
     }
+  },
+
+  isMobileLayout() {
+    if (this.state.layoutMode === "mobile") return true;
+    if (this.state.layoutMode === "desktop") return false;
+    return typeof window !== "undefined" && window.innerWidth <= 820;
+  },
+
+  setLayoutMode(mode) {
+    this.state.layoutMode = mode;
+    document.documentElement.classList.toggle("force-mobile-ui", mode === "mobile");
+    document.documentElement.classList.toggle("force-desktop-ui", mode === "desktop");
+    this.saveState();
+    this.render();
+  },
+
+  openMobileMenuModal() {
+    const isLight = this.state.theme === "light";
+    const lMode = this.state.layoutMode || "auto";
+    this.openModal(
+      "☰ Menu i Ustawienia Aplikacji",
+      `
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card" style="background:var(--bg-deep);padding:12px;">
+            <div style="font-size:0.78rem;font-weight:700;color:var(--gold);margin-bottom:8px;text-transform:uppercase;">🌍 Język Interfejsu i Opisów</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              <button class="${this.state.lang==='pl_en'?'btn-primary':'btn-ghost'} btn-sm" onclick="App.setLangMode('pl_en');App.openMobileMenuModal();">PL + EN</button>
+              <button class="${this.state.lang==='pl'?'btn-primary':'btn-ghost'} btn-sm" onclick="App.setLangMode('pl');App.openMobileMenuModal();">Polski (PL)</button>
+              <button class="${this.state.lang==='en'?'btn-primary':'btn-ghost'} btn-sm" onclick="App.setLangMode('en');App.openMobileMenuModal();">EN (Wikidot)</button>
+            </div>
+          </div>
+
+          <div class="card" style="background:var(--bg-deep);padding:12px;">
+            <div style="font-size:0.78rem;font-weight:700;color:var(--gold);margin-bottom:8px;text-transform:uppercase;">📏 Jednostki Odległości &amp; Motyw</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              <button class="${this.state.unitSystem==='imperial'?'btn-primary':'btn-ghost'} btn-sm" onclick="App.setUnitSystem('imperial');App.openMobileMenuModal();">Stopy (5 ft)</button>
+              <button class="${this.state.unitSystem==='metric'?'btn-primary':'btn-ghost'} btn-sm" onclick="App.setUnitSystem('metric');App.openMobileMenuModal();">Metry (1,5 m)</button>
+              <button class="btn-secondary btn-sm" onclick="App.toggleTheme();App.openMobileMenuModal();">${isLight ? '🌙 Tryb Ciemny' : '☀️ Tryb Jasny'}</button>
+            </div>
+          </div>
+
+          <div class="card" style="background:var(--bg-deep);padding:12px;">
+            <div style="font-size:0.78rem;font-weight:700;color:var(--gold);margin-bottom:8px;text-transform:uppercase;">📱 Układ Kart i Interfejsu (Mobile vs PC)</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+              <button class="${lMode==='auto'?'btn-primary':'btn-ghost'} btn-sm" onclick="App.setLayoutMode('auto');App.openMobileMenuModal();">⚡ Auto (${this.isMobileLayout() ? 'Mobilny' : 'PC'})</button>
+              <button class="${lMode==='mobile'?'btn-primary':'btn-ghost'} btn-sm" onclick="App.setLayoutMode('mobile');App.openMobileMenuModal();">📱 Kompaktowy Mobilny</button>
+              <button class="${lMode==='desktop'?'btn-primary':'btn-ghost'} btn-sm" onclick="App.setLayoutMode('desktop');App.openMobileMenuModal();">🖥️ Pełne Karty PC</button>
+            </div>
+          </div>
+
+          <div class="card" style="background:var(--bg-deep);padding:12px;">
+            <div style="font-size:0.78rem;font-weight:700;color:var(--gold);margin-bottom:8px;text-transform:uppercase;">🛠️ Narzędzia, Synchronizacja i Informacje</div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
+              <button class="btn-secondary btn-sm" onclick="App.closeModal();App.openSyncModal();">📥 Eksport / Import JSON</button>
+              <button class="btn-secondary btn-sm" onclick="App.closeModal();window.print();">🖨️ Drukuj / PDF</button>
+              <button class="btn-ghost btn-sm" onclick="App.closeModal();window.DND_TEST_SUITE && window.DND_TEST_SUITE.openTestReportModal();">🧪 Testy i Benchmarki</button>
+              <button class="btn-ghost btn-sm" onclick="App.closeModal();App.openSourcesAndLicensesModal();">⚖️ Źródła, RODO i Licencje</button>
+            </div>
+          </div>
+
+          <button class="btn-primary" onclick="App.closeModal()">Zamknij Menu</button>
+        </div>
+      `
+    );
   },
 
   // ---------------- INITIALIZATION & STORAGE ----------------
@@ -66,6 +132,16 @@ const App = {
     }
     if (!this.state.activeCharId && this.state.characters.length > 0) {
       this.state.activeCharId = this.state.characters[0].id;
+    }
+    if (typeof window !== "undefined") {
+      let lastIsMob = this.isMobileLayout();
+      window.addEventListener("resize", () => {
+        const nowMob = this.isMobileLayout();
+        if (nowMob !== lastIsMob) {
+          lastIsMob = nowMob;
+          this.render();
+        }
+      });
     }
     this.updateStaticUILang();
     this.updateHeaderPill();
@@ -215,7 +291,8 @@ const App = {
 
   renderDetailedRaceCard(r, isSelected = false, selectable = false, fullExpanded = false) {
     const isEn = this.state.lang === "en";
-    const isXL = Boolean(fullExpanded || this.state.raceForceXL);
+    const isMobCompact = this.isMobileLayout() && !fullExpanded;
+    const isXL = Boolean(fullExpanded || (!isMobCompact && this.state.raceForceXL));
     const cType = isEn ? (r.creature_type_en || "Humanoid") : (r.creature_type_pl || "Humanoid");
     const ageStr = isEn ? (r.age_en || "Standard lifespan (~80–100 years)") : (r.age_pl || "Standardowa długość życia (ok. 80–100 lat)");
     const heightStr = isEn ? (r.height_en || r.size) : (r.height_pl || r.size);
@@ -226,6 +303,40 @@ const App = {
     const primaryTraits = isXL ? dTraits : dTraits.slice(0, 2);
     const extraTraits = isXL ? [] : dTraits.slice(2);
     const hasSubTable = Boolean(r.suboptions_table && r.suboptions_table.length > 0);
+
+    if (isMobCompact) {
+      return `
+        <div class="card mobile-compact-card ${isSelected ? 'selected' : ''}" ${selectable ? `onclick="App.setCharRace('${r.id}')" style="cursor:pointer;"` : ''}>
+          <div style="display:flex;align-items:center;gap:11px;">
+            <img src="${this.getRacePortrait(r.id)}" alt="${r.name_pl}" class="portrait-thumb" style="width:48px;height:48px;">
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+                <div class="card-title" style="font-size:0.98rem;">${this.t(r.name_pl, r.name_en)}</div>
+                <span class="badge ${isSelected ? 'badge-emerald' : 'badge-gold'}" style="font-size:0.7rem;padding:2px 8px;">${isSelected ? '✓ Wybrana' : r.source}</span>
+              </div>
+              <div style="font-size:0.74rem;color:var(--text-muted);margin-top:2px;">
+                🧬 ${cType} • 📏 ${r.size} • 🏃 ${r.speed} ft${r.darkvision ? ` • 👁️ ${r.darkvision} ft` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="badge-row" style="margin:6px 0;">
+            <span class="badge badge-arcane">⚡ ${r.asi_desc_pl}</span>
+            ${dTraits.slice(0, 4).map(dt => `<span class="badge">✨ ${this.tPlain(dt.name_pl, dt.name_en)}</span>`).join("")}
+            ${dTraits.length > 4 ? `<span class="badge badge-gold">+${dTraits.length - 4} więcej</span>` : ''}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--border-subtle);padding-top:8px;">
+            <button class="btn-secondary btn-sm" style="flex:1;" onclick="event.stopPropagation(); App.openRaceDetailModal('${r.id}')">
+              📖 Pełny Opis &amp; Cechy (${dTraits.length})
+            </button>
+            ${selectable ? `
+              <button class="${isSelected ? 'btn-secondary' : 'btn-primary'} btn-sm" style="flex:1;" onclick="event.stopPropagation(); App.setCharRace('${r.id}')">
+                ${isSelected ? '✓ Wybrana Rasa' : '✨ Wybierz Rasę'}
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
 
     return `
       <div class="card race-card-2x2 ${isXL ? 'race-card-xl' : ''} ${isSelected ? 'selected' : ''}" ${selectable ? `onclick="App.setCharRace('${r.id}')" style="cursor:pointer;"` : ''}>
@@ -3142,11 +3253,11 @@ const App = {
 
       <!-- Mobile Quick Section Switcher (Wygodne przełączanie sekcji Karty Postaci na telefonie bez długiego scrollowania) -->
       <div class="mobile-sheet-tabs no-print">
-        <button class="mobile-sheet-tab ${(this.state.mobileSheetSection||'all')==='all'?'active':''}" onclick="App.state.mobileSheetSection='all';App.render();">📜 Cała Karta</button>
-        <button class="mobile-sheet-tab ${this.state.mobileSheetSection==='combat'?'active':''}" onclick="App.state.mobileSheetSection='combat';App.render();">⚔️ Walka, PW &amp; Bronie</button>
+        <button class="mobile-sheet-tab ${(this.state.mobileSheetSection||'combat')==='combat'?'active':''}" onclick="App.state.mobileSheetSection='combat';App.render();">⚔️ Walka, PW &amp; Bronie</button>
         <button class="mobile-sheet-tab ${this.state.mobileSheetSection==='stats'?'active':''}" onclick="App.state.mobileSheetSection='stats';App.render();">⚡ Cechy &amp; Umiejętności</button>
         <button class="mobile-sheet-tab ${this.state.mobileSheetSection==='magic'?'active':''}" onclick="App.state.mobileSheetSection='magic';App.render();">🔮 Magia &amp; Zdolności</button>
         <button class="mobile-sheet-tab ${this.state.mobileSheetSection==='gear'?'active':''}" onclick="App.state.mobileSheetSection='gear';App.render();">🎒 Stany &amp; Ekwipunek</button>
+        <button class="mobile-sheet-tab ${this.state.mobileSheetSection==='all'?'active':''}" onclick="App.state.mobileSheetSection='all';App.render();">📜 Pokaż Całą Kartę (Wszystkie Sekcje)</button>
       </div>
 
       <div class="sheet-grid">
@@ -3932,8 +4043,46 @@ const App = {
               ${list.map(sp => {
                 const sch = window.DND_SPELL_SCHOOLS[sp.school] || { pl: sp.school, icon: "✨" };
                 const isKnown = char && (char.knownSpells || []).includes(sp.id);
+                const isMobCompact = this.isMobileLayout();
                 const descLen = ((sp.desc_pl || "").length + (this.state.lang === "pl_en" ? (sp.desc_en || "").length : 0));
-                const isXL = Boolean(this.state.spellForceXL || sp.xl || descLen > 340 || (sp.desc_pl || "").length > 230);
+                const isXL = Boolean(!isMobCompact && (this.state.spellForceXL || sp.xl || descLen > 340 || (sp.desc_pl || "").length > 230));
+
+                if (isMobCompact) {
+                  return `
+                    <div class="card mobile-compact-card ${isKnown ? 'selected' : ''}">
+                      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;" onclick="App.openSpellModal('${sp.id}')">
+                        <div style="flex:1;min-width:0;">
+                          <div class="card-title" style="font-size:0.98rem;">${this.t(sp.name_pl, sp.name_en)}</div>
+                          <div style="font-size:0.74rem;color:var(--text-muted);margin-top:2px;">
+                            ${sch.icon} ${sch.pl} • ⏱️ ${sp.time} • 📏 ${sp.range} • ⏳ ${sp.duration}
+                          </div>
+                        </div>
+                        <span class="badge ${sp.level === 0 ? 'badge-cyan' : 'badge-gold'}" style="font-size:0.72rem;">
+                          ${sp.level === 0 ? 'Sztuczka' : sp.level + '. Krąg'}
+                        </span>
+                      </div>
+                      <div class="badge-row" style="margin:4px 0;">
+                        ${sp.concentration ? `<span class="badge badge-crimson">🧠 Koncentracja</span>` : ''}
+                        ${sp.ritual ? `<span class="badge badge-emerald">🕯️ Rytuał</span>` : ''}
+                        ${sp.damage_type ? `<span class="badge badge-arcane">💥 ${sp.damage_type}</span>` : ''}
+                        <span class="badge">🔮 ${sp.components}</span>
+                      </div>
+                      <div class="mobile-clamp-2" style="font-size:0.79rem;color:var(--text-muted);line-height:1.45;" onclick="App.openSpellModal('${sp.id}')">
+                        ${this.tDesc(sp)}
+                      </div>
+                      <div style="display:flex;gap:6px;align-items:center;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:8px;">
+                        ${sp.dice ? `<button class="btn-primary btn-sm" style="flex:1;" onclick="App.rollCustomFormula('${sp.dice}', '${sp.name_pl.replace(/'/g, "\\'")}')">🎲 Rzuć ${sp.dice.replace(/d/g,'k')}</button>` : ''}
+                        <button class="btn-ghost btn-sm" style="flex:1;" onclick="App.openSpellModal('${sp.id}')">📖 Pełny Opis</button>
+                        ${char ? `
+                          <button class="${isKnown ? 'btn-secondary' : 'btn-primary'} btn-sm" style="flex:1;" onclick="App.toggleCharSpell('${sp.id}')">
+                            ${isKnown ? '✓ W Księdze' : '➕ Dodaj'}
+                          </button>
+                        ` : ''}
+                      </div>
+                    </div>
+                  `;
+                }
+
                 return `
                   <div class="card spell-card-2x2 ${isXL ? 'spell-card-xl' : ''} ${isKnown ? 'selected' : ''}">
                     <div style="display:flex;flex-direction:column;gap:10px;">
@@ -4406,11 +4555,45 @@ const App = {
   renderDetailedSubclassCard(cls, sc, isSelected = false, selectable = false, fullExpanded = false) {
     const sMech = this.getSubclassMechanics(sc.id) || {};
     const feats = sMech.features || [];
+    const isMobCompact = this.isMobileLayout() && !fullExpanded;
     const primaryFeats = fullExpanded ? feats : feats.slice(0, 2);
     const extraFeats = fullExpanded ? [] : feats.slice(2);
     const spellsByLvl = sMech.spells_by_level || null;
     const bonusSpellsCount = spellsByLvl ? Object.values(spellsByLvl).flat().length : 0;
     const lore = sMech.lore_pl || this.tDesc(sc);
+
+    if (isMobCompact) {
+      return `
+        <div class="card mobile-compact-card ${isSelected ? 'selected' : ''}" ${selectable ? `onclick="App.setCharSubclass('${sc.id}')" style="cursor:pointer;"` : ''}>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <img src="${this.getClassPortrait(cls.id)}" alt="${sc.name_pl}" class="portrait-thumb" style="width:44px;height:44px;">
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+                <div class="card-title" style="font-size:0.98rem;">${this.t(sc.name_pl, sc.name_en)}</div>
+                <span class="badge ${isSelected ? 'badge-emerald' : 'badge-gold'}" style="font-size:0.7rem;">${isSelected ? '✓ Wybrana' : sc.source}</span>
+              </div>
+              <div style="font-size:0.74rem;color:var(--text-muted);margin-top:2px;">
+                ${cls.icon} ${this.tPlain(cls.name_pl, cls.name_en)} • Od ${cls.subclass_level}. poz. • ${feats.length} zdolności
+              </div>
+            </div>
+          </div>
+          <div class="badge-row" style="margin:6px 0;">
+            ${feats.map(f => `<span class="badge badge-gold">Poz. ${f.level}: ${this.tPlain(f.name_pl, f.name_en)}</span>`).join("")}
+            ${bonusSpellsCount ? `<span class="badge badge-arcane">🔮 +${bonusSpellsCount} Zaklęć</span>` : ''}
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--border-subtle);padding-top:8px;">
+            <button class="btn-secondary btn-sm" style="flex:1;" onclick="event.stopPropagation(); App.openSubclassDetailModal('${cls.id}', '${sc.id}')">
+              📖 Pełny Opis Podklasy
+            </button>
+            ${selectable ? `
+              <button class="${isSelected ? 'btn-secondary' : 'btn-primary'} btn-sm" style="flex:1;" onclick="event.stopPropagation(); App.setCharSubclass('${sc.id}')">
+                ${isSelected ? '✓ Wybrana' : '✨ Wybierz'}
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
 
     return `
       <div class="card subclass-card-detailed ${isSelected ? 'selected' : ''}" ${selectable ? `onclick="App.setCharSubclass('${sc.id}')" style="cursor:pointer;"` : ''}>
@@ -5025,13 +5208,66 @@ const App = {
   },
 
   renderDetailedMonsterCard(m, isModal = false) {
-    const isXL = Boolean(isModal || this.state.monsterForceXL);
+    const isMobCompact = this.isMobileLayout() && !isModal;
+    const isXL = Boolean(isModal || (!isMobCompact && this.state.monsterForceXL));
     const portraitUri = window.getMonsterPortraitUri ? window.getMonsterPortraitUri(m) : "";
     const aideddUrl = `https://www.aidedd.org/dnd/monstres.php?vo=${encodeURIComponent(m.aidedd_slug || m.id)}`;
     const allActions = m.actions || [];
     const primaryActions = isXL ? allActions : allActions.slice(0, 2);
     const extraActions = isXL ? [] : allActions.slice(2);
     const hasLeg = Boolean(m.legendary_actions && m.legendary_actions.length > 0);
+
+    if (isMobCompact) {
+      const firstAct = allActions[0];
+      return `
+        <div class="card mobile-compact-card">
+          <div style="display:flex;align-items:center;gap:11px;" onclick="App.openMonsterDetailModal('${m.id}')">
+            <img src="${portraitUri}" alt="${m.name_pl}" class="portrait-thumb" style="width:48px;height:48px;">
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+                <div class="card-title" style="font-size:0.98rem;">${this.t(m.name_pl, m.name_en)}</div>
+                <span class="badge badge-crimson" style="font-size:0.72rem;">💀 SW ${m.cr}</span>
+              </div>
+              <div style="font-size:0.74rem;color:var(--text-muted);margin-top:2px;">
+                ${this.tPlain(m.type_pl, m.type_en)} • ${m.size.split(" ")[0]} • 🛡️ KP ${m.ac} • ❤️ PW ${m.hp} • 🏃 ${m.speed}
+              </div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;background:var(--bg-deep);padding:6px;border-radius:8px;text-align:center;margin:6px 0;">
+            ${window.DND_ABILITIES.map(ab => {
+              const sc = (m.abilities && m.abilities[ab.id]) || 10;
+              const mod = this.getMod(sc);
+              return `
+                <div onclick="App.rollDie(20, ${mod}, '${m.name_pl.replace(/'/g, "\\'")}: Test ${ab.short_pl}')" style="cursor:pointer;padding:3px 2px;border-radius:5px;background:var(--bg-card);">
+                  <div style="font-size:0.62rem;font-weight:700;color:var(--gold);">${ab.short_pl}</div>
+                  <div style="font-size:0.78rem;font-weight:800;color:var(--text-main);">${sc} <span style="color:var(--gold-bright);">(${this.fmtMod(mod)})</span></div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:8px;">
+            ${firstAct && firstAct.atk_bonus !== undefined ? `
+              <button class="btn-primary btn-sm" onclick="App.rollDie(20, ${firstAct.atk_bonus}, '${m.name_pl.replace(/'/g, "\\'")}: Atak — ${firstAct.name_pl.replace(/'/g, "\\'")}')" style="flex:1;">
+                🎯 Atak ${this.fmtMod(firstAct.atk_bonus)}
+              </button>
+            ` : ''}
+            ${firstAct && firstAct.dmg_dice ? `
+              <button class="btn-secondary btn-sm" onclick="App.rollCustomFormula('${firstAct.dmg_dice}', '${m.name_pl.replace(/'/g, "\\'")}: Obrażenia — ${firstAct.name_pl.replace(/'/g, "\\'")}')" style="flex:1;">
+                🎲 ${firstAct.dmg_dice.replace(/d/g,'k')}
+              </button>
+            ` : ''}
+            <button class="btn-ghost btn-sm" onclick="App.openMonsterDetailModal('${m.id}')" style="flex:1;">
+              📖 Statblock
+            </button>
+            <button class="btn-secondary btn-sm" onclick="App.addMonsterToEncounter('${m.id}')">
+              ⚔️ +Starcie
+            </button>
+          </div>
+        </div>
+      `;
+    }
 
     return `
       <div class="card race-card-2x2 ${isXL ? 'race-card-xl' : ''}">

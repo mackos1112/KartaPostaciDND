@@ -353,6 +353,18 @@ window.DND_TEST_SUITE = {
         "Stopka #app-footer i modal licencji OK"
       );
 
+      const prevLayoutMode = App.state.layoutMode;
+      App.setLayoutMode("mobile");
+      const mobRaceHtml = App.renderDetailedRaceCard(window.DND_RACES[0], false, true, false);
+      const mobMonHtml = App.renderDetailedMonsterCard(window.DND_MONSTERS[0], false);
+      App.setLayoutMode("desktop");
+      const deskRaceHtml = App.renderDetailedRaceCard(window.DND_RACES[0], false, true, false);
+      App.setLayoutMode(prevLayoutMode || "auto");
+      assert("11. Bestiariusz AideDD i Licencje", "Dedykowany tryb mobilny (Mobile Companion UI vs PC 2×2/XL): kompaktowe karty mobilne (.mobile-compact-card) i szuflada menu (☰ Menu)",
+        mobRaceHtml.includes("mobile-compact-card") && mobMonHtml.includes("mobile-compact-card") && deskRaceHtml.includes("race-card-2x2") && typeof App.openMobileMenuModal === "function",
+        "Tryb Mobile (.mobile-compact-card) ≠ Tryb PC (.race-card-2x2) OK"
+      );
+
       // ----------------------------------------------------------------------
       // 12. BENCHMARKI WYDAJNOŚCI, CZASU RENDEROWANIA I OPTYMALIZACJI (PERFORMANCE)
       // ----------------------------------------------------------------------

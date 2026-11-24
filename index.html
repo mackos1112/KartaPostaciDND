@@ -299,7 +299,17 @@
         <div class="char-pill-hp" id="pill-hp">10/10 PW</div>
       </div>
 
-      <!-- Right Controls: Language Toggle, Dice Tray Toggle, Export/Import -->
+      <!-- Mobile Quick Actions (Visible on Smartphones <= 820px instead of 10-button desktop toolbar) -->
+      <div class="mobile-top-controls">
+        <button class="icon-btn dice-trigger-btn" onclick="App.toggleDiceDrawer()" title="Rzucacz kości (k4-k20)">
+          <span class="d20-badge">🎲 k20</span>
+        </button>
+        <button class="icon-btn mobile-menu-trigger" onclick="App.openMobileMenuModal()" title="Menu i Ustawienia Aplikacji">
+          ☰ Menu
+        </button>
+      </div>
+
+      <!-- Right Controls (Desktop Toolbar): Language Toggle, Dice Tray Toggle, Export/Import -->
       <div class="top-actions">
         <div class="lang-switch"
           title="Przełącz język opisów i interfejsu (Polski / Oryginał Wikidot EN / Dwujęzyczny)">
