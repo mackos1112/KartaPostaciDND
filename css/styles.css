@@ -1602,45 +1602,316 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
-/* Responsive Mobile Bottom Bar */
-@media (max-width: 768px) {
+/* Mobile Sheet Section Switcher (Szybkie przełączanie sekcji Karty Postaci na telefonie) */
+.mobile-sheet-tabs {
+  display: none;
+}
+
+@media (max-width: 960px) {
+  .mobile-sheet-tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 8px 4px 10px;
+    margin-bottom: 12px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-sheet-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .mobile-sheet-tab {
+    flex: 1 0 auto;
+    padding: 8px 13px;
+    border-radius: 999px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 0.78rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .mobile-sheet-tab.active {
+    background: linear-gradient(135deg, #e5c158, #b88f28);
+    color: #120e21;
+    border-color: var(--gold);
+    box-shadow: 0 3px 10px rgba(229, 193, 88, 0.3);
+  }
+  html.light .mobile-sheet-tab.active {
+    color: #fffdf9;
+  }
+}
+
+/* Kompleksowy Responsywny Interfejs Mobilny (Smartfony i Tablety) */
+@media (max-width: 820px) {
   .top-bar {
-    padding: 8px 12px;
+    padding: 8px 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .brand {
+    gap: 8px;
+  }
+  .brand-emblem {
+    width: 32px;
+    height: 32px;
+  }
+  .brand-main {
+    font-size: 0.96rem;
+    letter-spacing: 0.03em;
   }
   .brand-sub {
     display: none;
   }
   .active-char-pill {
+    padding: 3px 9px;
+    gap: 6px;
+    margin-left: auto;
+  }
+  .char-pill-meta {
     display: none;
   }
+  .char-pill-name {
+    font-size: 0.76rem;
+    max-width: 105px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .char-pill-hp {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+  }
+  .top-actions {
+    width: 100%;
+    justify-content: space-between;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    gap: 5px;
+    scrollbar-width: none;
+  }
+  .top-actions::-webkit-scrollbar {
+    display: none;
+  }
+  .lang-btn {
+    padding: 5px 7px;
+    font-size: 0.7rem;
+  }
+  .icon-btn {
+    padding: 5px 9px;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+
+  /* Dolny Pasek Nawigacji (6 zakładek dopasowanych do kciuka) */
   .main-nav {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 150;
-    background: rgba(15, 12, 27, 0.96);
-    backdrop-filter: blur(12px);
-    border-top: 1px solid var(--border-gold);
+    z-index: 200;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 2px;
+    background: rgba(15, 12, 27, 0.97);
+    backdrop-filter: blur(14px);
+    border-top: 1.5px solid var(--border-gold);
     border-bottom: none;
-    justify-content: space-around;
-    padding: 6px 4px;
+    padding: 5px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.65);
+  }
+  html.light .main-nav {
+    background: rgba(246, 237, 217, 0.97);
+    box-shadow: 0 -4px 18px rgba(80, 55, 20, 0.18);
   }
   .nav-item {
     flex-direction: column;
+    justify-content: center;
     gap: 2px;
-    padding: 6px 8px;
-    font-size: 0.7rem;
+    padding: 5px 2px;
+    font-size: 0.64rem;
+    border-radius: 8px;
+    min-width: 0;
+  }
+  .nav-label {
+    width: 100%;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .nav-icon {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
+    line-height: 1.1;
+  }
+
+  /* Główny kontener i nagłówki sekcji */
+  .main-content {
+    padding: 12px 10px 98px;
+  }
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+  .section-title {
+    font-size: 1.24rem;
+    line-height: 1.25;
+  }
+  .section-subtitle {
+    font-size: 0.8rem;
+  }
+
+  /* Siatki i Kafelki na telefonie — zawsze pełna szerokość bez ucinania */
+  .grid-cards,
+  .grid-races-detailed,
+  .grid-spells-detailed,
+  .grid-subclasses-detailed {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+  .card,
+  .race-card-2x2,
+  .spell-card-2x2,
+  .subclass-card-detailed {
+    padding: 13px 12px;
+  }
+  .card-header {
+    gap: 8px;
+  }
+  .portrait-lg {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 11px;
+  }
+  .portrait-thumb {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .race-vitals-grid,
+  .spell-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 8px;
+    gap: 6px;
   }
   .vitals-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
+  .vital-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  /* Pasek filtrów i formularze na telefonie */
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px;
+    gap: 8px;
+  }
+  .search-input-wrap {
+    width: 100%;
+    min-width: 0;
+  }
+  .filter-bar select,
+  .filter-bar input[type="text"] {
+    width: 100%;
+    font-size: 16px; /* Zapobiega niechcianemu auto-zoomowi w iOS Safari */
+    min-height: 42px;
+  }
+  input[type="text"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Pigułki kręgów i kroków kreatora — płynne przewijanie poziome palcem */
+  .spell-circles-bar,
+  .builder-stepper {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .spell-circles-bar::-webkit-scrollbar,
+  .builder-stepper::-webkit-scrollbar {
+    display: none;
+  }
+  .circle-pill,
+  .step-pill {
+    flex-shrink: 0;
+    padding: 8px 12px;
+  }
+
+  /* Tabele na telefonie (Bronie, Progresja 1-20) */
+  .wikidot-table th,
+  .wikidot-table td {
+    padding: 7px 8px;
+    font-size: 0.78rem;
+  }
+
+  /* Modale (Podstrony i Kreatory) jako wygodny dolny arkusz (Bottom Sheet) na telefonie */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal-card {
+    max-width: 100%;
+    max-height: 91vh;
+    border-radius: 18px 18px 0 0;
+    border-bottom: none;
+  }
+  .modal-header {
+    padding: 13px 15px;
+  }
+  .modal-header h3 {
+    font-size: 1.02rem;
+    line-height: 1.3;
+  }
+  .modal-body {
+    padding: 14px 12px calc(22px + env(safe-area-inset-bottom, 0px));
+  }
+  /* Wielokolumnowe formularze w modalach przechodzą w 1 kolumnę na małych ekranach */
+  .modal-body div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Szuflada kości i powiadomienia o rzucie nad dolnym paskiem nawigacji */
   .dice-drawer {
+    bottom: 68px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    padding: 13px;
+  }
+  .toast-container {
     bottom: 72px;
-    right: 12px;
+    width: 94vw;
+  }
+  .toast-roll {
+    min-width: 0;
+    width: 100%;
+    padding: 9px 13px;
+  }
+  .toast-roll-total {
+    font-size: 1.4rem;
+    padding: 3px 10px;
+  }
+  .std-pagination-bar {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    padding: 10px 12px;
+  }
+  .std-pagination-bar > div {
+    justify-content: center;
   }
 }
 

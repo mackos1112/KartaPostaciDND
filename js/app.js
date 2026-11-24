@@ -46,6 +46,7 @@ const App = {
     rolledPool: [],
     selectedPoolIdx: null,
     selectedClassView: "wizard",
+    mobileSheetSection: "all", // all | combat | stats | magic | gear
     pageLimits: {
       races: 24,
       feats: 24,
@@ -3104,9 +3105,18 @@ const App = {
         </div>
       </div>
 
+      <!-- Mobile Quick Section Switcher (Wygodne przełączanie sekcji Karty Postaci na telefonie bez długiego scrollowania) -->
+      <div class="mobile-sheet-tabs no-print">
+        <button class="mobile-sheet-tab ${(this.state.mobileSheetSection||'all')==='all'?'active':''}" onclick="App.state.mobileSheetSection='all';App.render();">📜 Cała Karta</button>
+        <button class="mobile-sheet-tab ${this.state.mobileSheetSection==='combat'?'active':''}" onclick="App.state.mobileSheetSection='combat';App.render();">⚔️ Walka, PW &amp; Bronie</button>
+        <button class="mobile-sheet-tab ${this.state.mobileSheetSection==='stats'?'active':''}" onclick="App.state.mobileSheetSection='stats';App.render();">⚡ Cechy &amp; Umiejętności</button>
+        <button class="mobile-sheet-tab ${this.state.mobileSheetSection==='magic'?'active':''}" onclick="App.state.mobileSheetSection='magic';App.render();">🔮 Magia &amp; Zdolności</button>
+        <button class="mobile-sheet-tab ${this.state.mobileSheetSection==='gear'?'active':''}" onclick="App.state.mobileSheetSection='gear';App.render();">🎒 Stany &amp; Ekwipunek</button>
+      </div>
+
       <div class="sheet-grid">
         <!-- LEFT COLUMN: ABILITIES, SAVING THROWS, SKILLS -->
-        <div class="sheet-col-left">
+        <div class="sheet-col-left" style="${(this.state.mobileSheetSection && this.state.mobileSheetSection !== 'all' && this.state.mobileSheetSection !== 'stats') ? 'display:none;' : ''}">
           <div class="card" style="margin-bottom:16px;">
             <h3 class="card-title" style="font-size:0.95rem;margin-bottom:10px;">⚡ Cechy Główne (Kliknij, by rzucić k20)</h3>
             <div class="abilities-grid">
@@ -3176,7 +3186,7 @@ const App = {
         </div>
 
         <!-- CENTER COLUMN: COMBAT VITALS, HP, SPELLS & CLASS FEATURES -->
-        <div class="sheet-col-center">
+        <div class="sheet-col-center" style="${(this.state.mobileSheetSection && this.state.mobileSheetSection !== 'all' && this.state.mobileSheetSection !== 'combat' && this.state.mobileSheetSection !== 'magic') ? 'display:none;' : ''}">
           <div class="vitals-grid">
             <div class="vital-card ac" style="cursor:pointer;" onclick="App.openArmorCreatorModal()" title="Kliknij, aby otworzyć Kreator Pancerza i Tarczy">
               <div class="vital-val">🛡️ ${ac}</div>
@@ -3487,7 +3497,7 @@ const App = {
         </div>
 
         <!-- RIGHT COLUMN: CONDITIONS, INVENTORY, NOTES -->
-        <div class="sheet-col-right">
+        <div class="sheet-col-right" style="${(this.state.mobileSheetSection && this.state.mobileSheetSection !== 'all' && this.state.mobileSheetSection !== 'gear') ? 'display:none;' : ''}">
           <div class="card" style="margin-bottom:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
               <h3 class="card-title" style="font-size:0.95rem;">⚠️ Stany, Buffy i Wyczerpanie (Conditions)</h3>
