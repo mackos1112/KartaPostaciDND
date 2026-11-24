@@ -258,18 +258,24 @@
     <footer class="app-footer no-print" id="app-footer">
       <div class="app-footer-inner">
         <div class="app-footer-col">
-          <div class="app-footer-title">⚖️ Licencje (CC-BY-4.0 / OGL 1.0a / Fan Content)</div>
+          <div class="app-footer-title">⚖️ Informacje Prawne, SRD 5.1 (CC-BY-4.0), OGL 1.0a &amp; Fan Content Policy</div>
           <p class="app-footer-text">
-            Obejmuje materiały z <strong>System Reference Document 5.1 (SRD 5.1)</strong> autorstwa <strong>Wizards of the Coast LLC</strong>, udostępnione na licencji <a href="https://creativecommons.org/licenses/by/4.0/legalcode" target="_blank" rel="noopener">Creative Commons Attribution 4.0 International (CC-BY-4.0)</a> oraz <strong>Open Game License v1.0a</strong>. Projekt niekomercyjny zgodny z <a href="https://company.wizards.com/pl/legal/fancontentpolicy" target="_blank" rel="noopener">Wizards of the Coast Fan Content Policy</a> (niezatwierdzony przez Wizards). Kod aplikacji i portrety SVG: <strong>MIT License</strong>.
+            <strong>SRD 5.1 Attribution (CC-BY-4.0):</strong> This work includes material taken from the <em>System Reference Document 5.1 (“SRD 5.1”)</em> by <strong>Wizards of the Coast LLC</strong> and available at <a href="https://dnd.wizards.com/resources/systems-reference-document" target="_blank" rel="noopener">dnd.wizards.com/resources/systems-reference-document</a>. The SRD 5.1 is licensed under the <a href="https://creativecommons.org/licenses/by/4.0/legalcode" target="_blank" rel="noopener">Creative Commons Attribution 4.0 International License (CC-BY-4.0)</a>.<br>
+            <strong>Wizards Fan Content Policy:</strong> Kroniki D&amp;D 5e to nieoficjalne Treści Fanowskie dozwolone w ramach <a href="https://company.wizards.com/pl/legal/fancontentpolicy" target="_blank" rel="noopener">Polityki Treści Fanowskich</a>. Niezatwierdzone ani niesponsorowane przez Wizards. Część wykorzystanych materiałów stanowi własność Wizards of the Coast. ©Wizards of the Coast LLC.
+          </p>
+          <p class="app-footer-text" style="margin-top:4px;font-size:0.75rem;">
+            <strong>🔒 Prywatność (RODO / GDPR) i Pamięć Lokalna:</strong> Aplikacja działa w 100% lokalnie w Twojej przeglądarce (<em>Client-Side</em>) — nie zbiera, nie przesyła na serwer ani nie profiluje żadnych danych osobowych. Zapisane postacie przechowywane są wyłącznie w pamięci <code>localStorage</code> Twojego urządzenia.
           </p>
         </div>
         <div class="app-footer-col">
-          <div class="app-footer-title">📚 Źródła Danych i Kompendia</div>
+          <div class="app-footer-title">📚 Dokumenty Prawne, Licencje i Źródła Referencyjne</div>
           <div class="app-footer-links">
+            <button class="btn-primary btn-sm" onclick="App.openSourcesAndLicensesModal('licenses')">⚖️ Licencje, OGL 1.0a &amp; SRD 5.1</button>
+            <button class="btn-secondary btn-sm" onclick="App.openSourcesAndLicensesModal('privacy')">🔒 Polityka Prywatności, RODO &amp; LocalStorage</button>
+            <button class="btn-secondary btn-sm" onclick="App.openSourcesAndLicensesModal('terms')">📜 Regulamin, Znaki Towarowe &amp; DMCA</button>
             <a href="http://dnd5e.wikidot.com/" target="_blank" rel="noopener" class="footer-link-pill">🌐 dnd5e.wikidot.com ↗</a>
             <a href="https://www.aidedd.org/monster-dnd5/" target="_blank" rel="noopener" class="footer-link-pill">🐉 aidedd.org/monster-dnd5 ↗</a>
-            <a href="https://dnd.wizards.com/resources/systems-reference-document" target="_blank" rel="noopener" class="footer-link-pill">📜 Oficjalny SRD 5.1 ↗</a>
-            <button class="btn-secondary btn-sm" onclick="App.openSourcesAndLicensesModal()">📖 Pełne Źródła, Skróty Podręczników i Licencje</button>
+            <a href="https://github.com/mackos1112/KartaPostaciDND/blob/main/LICENSE.md" target="_blank" rel="noopener" class="footer-link-pill">📄 LICENSE.md (GitHub) ↗</a>
           </div>
         </div>
       </div>

@@ -5293,71 +5293,182 @@ const App = {
     this.toast(`🐉 Dodano potwora do Bestiariusza: ${name_pl}!`);
   },
 
-  openSourcesAndLicensesModal() {
+  clearAllLocalData() {
+    localStorage.removeItem("dnd5e_characters_v1");
+    localStorage.removeItem("dnd5e_active_char_v1");
+    localStorage.removeItem("dnd5e_lang_v1");
+    localStorage.removeItem("dnd5e_unit_v1");
+    localStorage.removeItem("dnd5e_theme_v1");
+    localStorage.removeItem("dnd5e_custom_spells_v1");
+    this.state.characters = [];
+    this.seedDemoCharacters();
+    this.closeModal();
+    this.render();
+    this.toast("🗑️ Wykasowano wszystkie dane z pamięci lokalnej przeglądarki (localStorage) i przywrócono stan początkowy.");
+  },
+
+  openSourcesAndLicensesModal(activeSection = "licenses") {
     this.openModal(
-      "⚖️ Źródła Danych, Podręczniki i Licencje (SRD 5.1 / CC-BY-4.0 / OGL 1.0a)",
+      "⚖️ Centrum Informacji Prawnych: Licencje (CC-BY-4.0 / OGL 1.0a), RODO, LocalStorage i Regulamin",
       `
-        <div style="display:flex;flex-direction:column;gap:14px;font-size:0.86rem;">
-          <div class="race-lore-box">
-            <strong>📜 1. Licencja System Reference Document 5.1 (Creative Commons CC-BY-4.0)</strong><br>
-            Niniejsza aplikacja wykorzystuje materiały z dokumentu <em>System Reference Document 5.1 (SRD 5.1)</em> autorstwa <strong>Wizards of the Coast LLC</strong>, udostępnionego na międzynarodowej licencji <a href="https://creativecommons.org/licenses/by/4.0/legalcode" target="_blank" style="color:var(--gold);">Creative Commons Attribution 4.0 International (CC-BY-4.0) ↗</a>.<br>
-            Oficjalny dokument SRD 5.1: <a href="https://dnd.wizards.com/resources/systems-reference-document" target="_blank" style="color:var(--gold);">dnd.wizards.com/resources/systems-reference-document ↗</a>
+        <div style="display:flex;flex-direction:column;gap:14px;font-size:0.85rem;">
+          <div class="spell-circles-bar" style="margin-bottom:4px;">
+            <button class="circle-pill ${activeSection==='licenses'?'active':''}" onclick="App.openSourcesAndLicensesModal('licenses')">⚖️ 1. Licencje, SRD 5.1 &amp; OGL 1.0a</button>
+            <button class="circle-pill ${activeSection==='privacy'?'active':''}" onclick="App.openSourcesAndLicensesModal('privacy')">🔒 2. Polityka Prywatności, RODO &amp; LocalStorage</button>
+            <button class="circle-pill ${activeSection==='terms'?'active':''}" onclick="App.openSourcesAndLicensesModal('terms')">📜 3. Regulamin, Znaki Towarowe &amp; DMCA</button>
+            <button class="circle-pill ${activeSection==='sources'?'active':''}" onclick="App.openSourcesAndLicensesModal('sources')">📚 4. Wykaz Źródeł i Podręczników</button>
           </div>
 
-          <div class="subclass-feature-item">
-            <strong style="color:var(--gold-bright);">🛡️ 2. Polityka Treści Fanowskich (Wizards of the Coast Fan Content Policy) &amp; OGL v1.0a</strong>
-            <div style="margin-top:4px;color:var(--text-main);">
-              <strong>Kroniki D&amp;D 5e</strong> są darmowym, niekomercyjnym narzędziem fanowskim stworzonym zgodnie z <a href="https://company.wizards.com/pl/legal/fancontentpolicy" target="_blank" style="color:var(--gold);">Polityką Treści Fanowskich Wizards of the Coast ↗</a> oraz <strong>Open Game License v1.0a</strong> (© 2000 Wizards of the Coast, Inc.). Część wykorzystanych materiałów stanowi własność intelektualną Wizards of the Coast LLC. Aplikacja nie jest zatwierdzona ani sponsorowana przez Wizards of the Coast.
+          ${activeSection === "licenses" ? `
+            <div class="race-lore-box">
+              <strong>📜 1. Wymagana Atrybucja System Reference Document 5.1 (Creative Commons CC-BY-4.0)</strong><br>
+              <em>"This work includes material taken from the System Reference Document 5.1 (“SRD 5.1”) by Wizards of the Coast LLC and available at <a href="https://dnd.wizards.com/resources/systems-reference-document" target="_blank" style="color:var(--gold);">https://dnd.wizards.com/resources/systems-reference-document</a>. The SRD 5.1 is licensed under the Creative Commons Attribution 4.0 International License available at <a href="https://creativecommons.org/licenses/by/4.0/legalcode" target="_blank" style="color:var(--gold);">https://creativecommons.org/licenses/by/4.0/legalcode</a>."</em>
             </div>
-          </div>
 
-          <div class="subclass-feature-item">
-            <strong style="color:var(--gold-bright);">🌐 3. Internetowe Bazy i Kompendia Referencyjne</strong>
-            <ul style="padding-left:18px;margin-top:6px;display:flex;flex-direction:column;gap:4px;">
-              <li><strong>D&amp;D 5e Wikidot Compendium:</strong> <a href="http://dnd5e.wikidot.com/" target="_blank" style="color:var(--gold);">http://dnd5e.wikidot.com/ ↗</a> — struktura tabel klas 1–20, podklas, rodowodów, teł, atutów, zaklęć kręgów 0–9 i magicznych przedmiotów.</li>
-              <li><strong>AideDD Monster D&amp;D 5e:</strong> <a href="https://www.aidedd.org/monster-dnd5/" target="_blank" style="color:var(--gold);">https://www.aidedd.org/monster-dnd5/ ↗</a> — katalog potworów i bloków statystyk w zakładce Bestiariusz.</li>
-            </ul>
-          </div>
-
-          <div>
-            <strong style="color:var(--gold);display:block;margin-bottom:6px;">📚 4. Wykaz Skrótów Podręczników Źródłowych D&amp;D 5e:</strong>
-            <div class="wikidot-table-wrap" style="margin:0;">
-              <table class="wikidot-table">
-                <thead>
-                  <tr>
-                    <th>Skrót</th>
-                    <th>Pełny Tytuł Podręcznika (EN / PL)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td><strong>PHB</strong></td><td>Player's Handbook (Podręcznik Gracza D&amp;D 5e)</td></tr>
-                  <tr><td><strong>DMG</strong></td><td>Dungeon Master's Guide (Przewodnik Mistrza Podziemi)</td></tr>
-                  <tr><td><strong>MM</strong></td><td>Monster Manual (Księga Potworów)</td></tr>
-                  <tr><td><strong>XGE</strong></td><td>Xanathar's Guide to Everything (Przewodnik Xanathara)</td></tr>
-                  <tr><td><strong>TCE</strong></td><td>Tasha's Cauldron of Everything (Kocioł Wszystkiego Tashy)</td></tr>
-                  <tr><td><strong>FTD</strong></td><td>Fizban's Treasury of Dragons (Skarbiec Smoków Fizbana)</td></tr>
-                  <tr><td><strong>MPMM</strong></td><td>Mordenkainen Presents: Monsters of the Multiverse (Potwory Wieloświata)</td></tr>
-                  <tr><td><strong>VGM / MToF</strong></td><td>Volo's Guide to Monsters / Mordenkainen's Tome of Foes</td></tr>
-                  <tr><td><strong>VRGR</strong></td><td>Van Richten's Guide to Ravenloft (Przewodnik Van Richtena po Ravenlofcie)</td></tr>
-                  <tr><td><strong>ERLW</strong></td><td>Eberron: Rising from the Last War</td></tr>
-                  <tr><td><strong>EGW</strong></td><td>Explorer's Guide to Wildemount (Przewodnik Odkrywcy po Wildemount)</td></tr>
-                  <tr><td><strong>SCAG</strong></td><td>Sword Coast Adventurer's Guide (Przewodnik po Wybrzeżu Mieczy)</td></tr>
-                  <tr><td><strong>GGtR / MOT / SCC</strong></td><td>Guildmasters' Guide to Ravnica / Mythic Odysseys of Theros / Strixhaven</td></tr>
-                  <tr><td><strong>AAG / DSotDQ</strong></td><td>Astral Adventurer's Guide (Spelljammer) / Dragonlance: Shadow of the Dragon Queen</td></tr>
-                  <tr><td><strong>BGG / BMT</strong></td><td>Bigby Presents: Glory of the Giants / The Book of Many Things</td></tr>
-                </tbody>
-              </table>
+            <div class="subclass-feature-item">
+              <strong style="color:var(--gold-bright);">🛡️ 2. Wymagana Nota Polityki Treści Fanowskich (Wizards of the Coast Fan Content Policy)</strong>
+              <div style="margin-top:4px;color:var(--text-main);">
+                <strong>PL:</strong> „Kroniki D&amp;D 5e to nieoficjalne Treści Fanowskie dozwolone w ramach <a href="https://company.wizards.com/pl/legal/fancontentpolicy" target="_blank" style="color:var(--gold);">Polityki Treści Fanowskich</a>. Niezatwierdzone ani niesponsorowane przez Wizards. Część wykorzystanych materiałów stanowi własność Wizards of the Coast. ©Wizards of the Coast LLC.”<br>
+                <strong>EN:</strong> “Kroniki D&amp;D 5e is unofficial Fan Content permitted under the Fan Content Policy. Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.”
+              </div>
             </div>
-          </div>
 
-          <div class="subclass-feature-item">
-            <strong style="color:var(--gold-bright);">💻 5. Licencja Kodu Aplikacji i Grafik SVG (MIT License)</strong>
-            <div style="margin-top:4px;color:var(--text-muted);">
-              Kod źródłowy aplikacji <em>Kroniki D&amp;D 5e</em> oraz proceduralne generatory portretów SVG ras, klas i potworów (<code>js/data-portraits.js</code>, <code>js/data-monsters.js</code>) udostępniane są na otwartej licencji <strong>MIT License</strong> (szczegóły w pliku <code>LICENSE.md</code> w repozytorium projektu).
+            <details class="std-accordion" open>
+              <summary><span>📜 3. Pełny Tekst Prawny Open Game License Version 1.0a (OGL v1.0a + Section 15 Copyright Notice)</span></summary>
+              <div class="std-accordion-body" style="font-family:var(--font-mono);font-size:0.74rem;line-height:1.48;max-height:240px;overflow-y:auto;white-space:pre-wrap;color:var(--text-muted);">OPEN GAME LICENSE Version 1.0a
+The following text is the property of Wizards of the Coast, Inc. and is Copyright 2000 Wizards of the Coast, Inc ("Wizards"). All Rights Reserved.
+
+1. Definitions: (a)"Contributors" means the copyright and/or trademark owners who have contributed Open Game Content; (b)"Derivative Material" means copyrighted material including derivative works and translations (including into other computer languages), potation, modification, correction, addition, extension, upgrade, improvement, compilation, abridgment or other form in which an existing work may be recast, transformed or adapted; (c) "Distribute" means to reproduce, license, rent, lease, sell, broadcast, publicly display, transmit or otherwise distribute; (d)"Open Game Content" means the game mechanic and includes the methods, procedures, processes and routines to the extent such content does not embody the Product Identity and is an enhancement over the prior art and any additional content clearly identified as Open Game Content by the Contributor, and means any work covered by this License, including translations and derivative works under copyright law, but specifically excludes Product Identity. (e) "Product Identity" means product and product line names, logos and identifying marks including trade dress; artifacts; creatures characters; stories, storylines, plots, thematic elements, dialogue, incidents, language, artwork, symbols, designs, depictions, likenesses, formats, poses, concepts, themes and graphic, photographic and other visual or audio representations; names and descriptions of characters, spells, enchantments, personalities, teams, personas, likenesses and special abilities; places, locations, environments, creatures, equipment, magical or supernatural abilities or effects, logos, symbols, or graphic designs; and any other trademark or registered trademark clearly identified as Product Identity by the owner of the Product Identity, and which specifically excludes the Open Game Content; (f) "Trademark" means the logos, names, mark, sign, motto, designs that are used by a Contributor to identify itself or its products or the associated products contributed to the Open Game License by the Contributor (g) "Use", "Used" or "Using" means to use, Distribute, copy, edit, format, modify, translate and otherwise create Derivative Material of Open Game Content. (h) "You" or "Your" means the licensee in terms of this agreement.
+2. The License: This License applies to any Open Game Content that contains a notice indicating that the Open Game Content may only be Used under and in terms of this License. You must affix such a notice to any Open Game Content that you Use. No terms may be added to or subtracted from this License except as described by the License itself. No other terms or conditions may be applied to any Open Game Content distributed using this License.
+3. Offer and Acceptance: By Using the Open Game Content You indicate Your acceptance of the terms of this License.
+4. Grant and Consideration: In consideration for agreeing to use this License, the Contributors grant You a perpetual, worldwide, royalty-free, non-exclusive license with the exact terms of this License to Use, the Open Game Content.
+5. Representation of Authority to Contribute: If You are contributing original material as Open Game Content, You represent that Your Contributions are Your original creation and/or You have sufficient rights to grant the rights conveyed by this License.
+6. Notice of License Copyright: You must update the COPYRIGHT NOTICE portion of this License to include the exact text of the COPYRIGHT NOTICE of any Open Game Content You are copying, modifying or distributing, and You must add the title, the copyright date, and the copyright holder's name to the COPYRIGHT NOTICE of any original Open Game Content you Distribute.
+7. Use of Product Identity: You agree not to Use any Product Identity, including as an indication as to compatibility, except as expressly licensed in another, independent Agreement with the owner of each element of that Product Identity.
+8. Identification: If you distribute Open Game Content You must clearly indicate which portions of the work that you are distributing are Open Game Content.
+9. Updating the License: Wizards or its designated Agents may publish updated versions of this License. You may use any authorized version of this License to copy, modify and distribute any Open Game Content originally distributed under any version of this License.
+10. Copy of this License: You MUST include a copy of this License with every copy of the Open Game Content You Distribute.
+11. Use of Contributor Credits: You may not market or advertise the Open Game Content using the name of any Contributor unless You have written permission from the Contributor to do so.
+12. Inability to Comply: If it is impossible for You to comply with any of the terms of this License with respect to some or all of the Open Game Content due to statute, judicial order, or governmental regulation then You may not Use any Open Game Material so affected.
+13. Termination: This License will terminate automatically if You fail to comply with all terms herein and fail to cure such breach within 30 days of becoming aware of the breach. All sublicenses shall survive the termination of this License.
+14. Reformation: If any provision of this License is held to be unenforceable, such provision shall be reformed only to the extent necessary to make it enforceable.
+15. COPYRIGHT NOTICE
+Open Game License v 1.0a Copyright 2000, Wizards of the Coast, LLC.
+System Reference Document 5.1 Copyright 2016, Wizards of the Coast, Inc.; Authors Mike Mearls, Jeremy Crawford, Chris Perkins, Rodney Thompson, Peter Lee, James Wyatt, Robert J. Schwalb, Bruce R. Cordell, Chris Sims, and Steve Townshend, based on original material by E. Gary Gygax and Dave Arneson.
+Kroniki D&D 5e (D&D 5e Chronicles Web Application) Copyright 2026, mackos1112.</div>
+            </details>
+
+            <div class="subclass-feature-item">
+              <strong style="color:var(--gold-bright);">💻 4. Licencja MIT dla Kodu Aplikacji i Grafik SVG (MIT License)</strong>
+              <div style="margin-top:4px;color:var(--text-muted);font-size:0.8rem;">
+                Copyright (c) 2026 mackos1112. Kod źródłowy silnika aplikacji <em>Kroniki D&amp;D 5e</em> oraz proceduralne generatory portretów SVG ras, klas i potworów (<code>js/data-portraits.js</code>, <code>js/data-monsters.js</code>) są udostępniane na otwartej licencji <strong>MIT License</strong>.
+              </div>
             </div>
-          </div>
+          ` : ''}
 
-          <div style="display:flex;justify-content:flex-end;">
+          ${activeSection === "privacy" ? `
+            <div class="race-lore-box">
+              <strong>🔒 1. Klauzula Informacyjna RODO (GDPR — Rozporządzenie UE 2016/679)</strong><br>
+              Aplikacja <strong>Kroniki D&amp;D 5e</strong> działa wyłącznie lokalnie po stronie przeglądarki użytkownika (architektura <em>100% Client-Side / Zero-Backend</em>). Twórca aplikacji <strong>nie gromadzi, nie przesyła na żaden serwer, nie analizuje ani nie przetwarza żadnych danych osobowych użytkowników</strong>, nie stosuje ciasteczek śledzących ani reklamowych oraz nie wymaga rejestracji konta.
+            </div>
+
+            <div class="subclass-feature-item">
+              <strong style="color:var(--gold-bright);">💾 2. Informacja o Pamięci Lokalnej (<code>window.localStorage</code> — Art. 399 PKE / Dyrektywa ePrivacy)</strong>
+              <div style="margin-top:6px;color:var(--text-main);">
+                Aplikacja wykorzystuje wyłącznie niezbędną technicznie pamięć lokalną Twojej przeglądarki (<code>localStorage</code>) na Twoim urządzeniu, aby zachować utworzone przez Ciebie karty postaci i ustawienia widoku:
+                <ul style="padding-left:18px;margin-top:6px;display:flex;flex-direction:column;gap:3px;">
+                  <li><code>dnd5e_characters_v1</code> — zapisane przez Ciebie karty postaci i ich ekwipunek,</li>
+                  <li><code>dnd5e_active_char_v1</code> — identyfikator ostatnio wybranej postaci,</li>
+                  <li><code>dnd5e_lang_v1</code>, <code>dnd5e_unit_v1</code>, <code>dnd5e_theme_v1</code> — wybór języka (PL/EN), jednostek (ft/m) oraz motywu (Ciemny/Jasny),</li>
+                  <li><code>dnd5e_custom_spells_v1</code> — dodane przez Ciebie własne zaklęcia.</li>
+                </ul>
+              </div>
+              <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;background:var(--bg-deep);padding:10px 12px;border-radius:8px;border:1px solid var(--border-subtle);">
+                <span style="font-size:0.8rem;color:var(--text-muted);">Masz pełne prawo do eksportu swoich danych do pliku JSON lub ich natychmiastowego usunięcia z przeglądarki:</span>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn-secondary btn-sm" onclick="App.exportCharactersJSON()">💾 Eksportuj Dane (JSON)</button>
+                  <button class="btn-danger btn-sm" onclick="App.clearAllLocalData()">🗑️ Wyczyść Wszystkie Dane Lokalne</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="subclass-feature-item">
+              <strong style="color:var(--gold-bright);">🌐 3. Zewnętrzni Dostawcy Infrastruktury Technicznej (GitHub Pages &amp; Google Fonts)</strong>
+              <div style="margin-top:4px;color:var(--text-main);">
+                • <strong>Hosting statyczny:</strong> Witryna jest hostowana w usłudze <em>GitHub Pages</em> (GitHub, Inc., 88 Colin P. Kelly Jr. St., San Francisco, CA 94107, USA). Serwery GitHub mogą przetwarzać techniczne logi zapytań HTTP (np. adres IP) w celach bezpieczeństwa sieciowego zgodnie z <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" style="color:var(--gold);">GitHub Privacy Statement ↗</a>.<br>
+                • <strong>Czcionki webowe:</strong> Krój pisma pobierany jest z CDN <em>Google Fonts</em> zgodnie z <a href="https://policies.google.com/privacy" target="_blank" style="color:var(--gold);">Polityką Prywatności Google ↗</a>.
+              </div>
+            </div>
+          ` : ''}
+
+          ${activeSection === "terms" ? `
+            <div class="race-lore-box">
+              <strong>📜 1. Regulamin Świadczenia Usług Drogą Elektroniczną i Wyłączenie Odpowiedzialności</strong><br>
+              1. Serwis <strong>Kroniki D&amp;D 5e</strong> jest darmowym, niekomercyjnym narzędziem edukacyjnym i pomocniczym dla graczy stołowych gier fabularnych (RPG).<br>
+              2. Do korzystania z aplikacji wymagana jest przeglądarka internetowa z włączoną obsługą JavaScript i HTML5.<br>
+              3. Aplikacja jest dostarczana w stanie „takim, jaki jest” (<em>AS-IS</em>), bez jakichkolwiek gwarancji wyraźnych ani dorozumianych.
+            </div>
+
+            <div class="subclass-feature-item">
+              <strong style="color:var(--gold-bright);">™️ 2. Zastrzeżenie Znaków Towarowych (Trademarks Disclaimer)</strong>
+              <div style="margin-top:4px;color:var(--text-main);">
+                Nazwy <em>Dungeons &amp; Dragons, D&amp;D, D&amp;D 5e, Wizards of the Coast, Player's Handbook, Dungeon Master's Guide, Monster Manual, Xanathar's Guide to Everything, Tasha's Cauldron of Everything, Fizban's Treasury of Dragons, Mordenkainen Presents: Monsters of the Multiverse, Forgotten Realms, Eberron, Ravenloft, Ravnica, Theros, Strixhaven, Spelljammer, Dragonlance</em> oraz powiązane logotypy są znakami towarowymi lub zastrzeżonymi znakami towarowymi należącymi do <strong>Wizards of the Coast LLC</strong> w USA i innych krajach. Zostały one przywołane wyłącznie w celach informacyjnych i opisowych (określenie kompatybilności z zasadami 5. edycji).
+              </div>
+            </div>
+
+            <div class="subclass-feature-item">
+              <strong style="color:var(--gold-bright);">📬 3. Kontakt oraz Procedura Zgłaszania Naruszeń (Notice &amp; Takedown / DMCA)</strong>
+              <div style="margin-top:4px;color:var(--text-main);">
+                Szanujemy prawa własności intelektualnej wszystkich autorów i wydawców. W przypadku jakichkolwiek pytań prawnych, uwag lub zgłoszeń dotyczących praw autorskich (<em>Notice &amp; Takedown / DMCA</em>) prosimy o utworzenie zgłoszenia w oficjalnym repozytorium projektu:<br>
+                🔗 <a href="https://github.com/mackos1112/KartaPostaciDND/issues" target="_blank" style="color:var(--gold);font-weight:700;">https://github.com/mackos1112/KartaPostaciDND/issues ↗</a>
+              </div>
+            </div>
+          ` : ''}
+
+          ${activeSection === "sources" ? `
+            <div class="subclass-feature-item">
+              <strong style="color:var(--gold-bright);">🌐 Internetowe Bazy i Kompendia Referencyjne</strong>
+              <ul style="padding-left:18px;margin-top:6px;display:flex;flex-direction:column;gap:4px;">
+                <li><strong>D&amp;D 5e Wikidot Compendium:</strong> <a href="http://dnd5e.wikidot.com/" target="_blank" style="color:var(--gold);">http://dnd5e.wikidot.com/ ↗</a> — struktura tabel klas 1–20, podklas, rodowodów, teł, atutów, zaklęć kręgów 0–9 i magicznych przedmiotów.</li>
+                <li><strong>AideDD Monster D&amp;D 5e:</strong> <a href="https://www.aidedd.org/monster-dnd5/" target="_blank" style="color:var(--gold);">https://www.aidedd.org/monster-dnd5/ ↗</a> — katalog potworów i bloków statystyk w zakładce Bestiariusz.</li>
+                <li><strong>Oficjalny Dokument SRD 5.1 (Wizards of the Coast):</strong> <a href="https://dnd.wizards.com/resources/systems-reference-document" target="_blank" style="color:var(--gold);">https://dnd.wizards.com/resources/systems-reference-document ↗</a></li>
+              </ul>
+            </div>
+
+            <div>
+              <strong style="color:var(--gold);display:block;margin-bottom:6px;">📚 Wykaz Skrótów Podręczników Źródłowych D&amp;D 5e:</strong>
+              <div class="wikidot-table-wrap" style="margin:0;">
+                <table class="wikidot-table">
+                  <thead>
+                    <tr>
+                      <th>Skrót</th>
+                      <th>Pełny Tytuł Podręcznika (EN / PL)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><strong>PHB</strong></td><td>Player's Handbook (Podręcznik Gracza D&amp;D 5e)</td></tr>
+                    <tr><td><strong>DMG</strong></td><td>Dungeon Master's Guide (Przewodnik Mistrza Podziemi)</td></tr>
+                    <tr><td><strong>MM</strong></td><td>Monster Manual (Księga Potworów)</td></tr>
+                    <tr><td><strong>XGE</strong></td><td>Xanathar's Guide to Everything (Przewodnik Xanathara)</td></tr>
+                    <tr><td><strong>TCE</strong></td><td>Tasha's Cauldron of Everything (Kocioł Wszystkiego Tashy)</td></tr>
+                    <tr><td><strong>FTD</strong></td><td>Fizban's Treasury of Dragons (Skarbiec Smoków Fizbana)</td></tr>
+                    <tr><td><strong>MPMM</strong></td><td>Mordenkainen Presents: Monsters of the Multiverse (Potwory Wieloświata)</td></tr>
+                    <tr><td><strong>VGM / MToF</strong></td><td>Volo's Guide to Monsters / Mordenkainen's Tome of Foes</td></tr>
+                    <tr><td><strong>VRGR</strong></td><td>Van Richten's Guide to Ravenloft (Przewodnik Van Richtena po Ravenlofcie)</td></tr>
+                    <tr><td><strong>ERLW</strong></td><td>Eberron: Rising from the Last War</td></tr>
+                    <tr><td><strong>EGW</strong></td><td>Explorer's Guide to Wildemount (Przewodnik Odkrywcy po Wildemount)</td></tr>
+                    <tr><td><strong>SCAG</strong></td><td>Sword Coast Adventurer's Guide (Przewodnik po Wybrzeżu Mieczy)</td></tr>
+                    <tr><td><strong>GGtR / MOT / SCC</strong></td><td>Guildmasters' Guide to Ravnica / Mythic Odysseys of Theros / Strixhaven</td></tr>
+                    <tr><td><strong>AAG / DSotDQ</strong></td><td>Astral Adventurer's Guide (Spelljammer) / Dragonlance: Shadow of the Dragon Queen</td></tr>
+                    <tr><td><strong>BGG / BMT</strong></td><td>Bigby Presents: Glory of the Giants / The Book of Many Things</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ` : ''}
+
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-subtle);padding-top:12px;">
+            <a href="https://github.com/mackos1112/KartaPostaciDND/blob/main/LICENSE.md" target="_blank" style="color:var(--gold);font-weight:600;">📄 Otwórz pełny plik LICENSE.md w repozytorium ↗</a>
             <button class="btn-primary" onclick="App.closeModal()">Zamknij</button>
           </div>
         </div>
